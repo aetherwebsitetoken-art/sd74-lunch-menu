@@ -24,8 +24,13 @@
   #fit{position:absolute;top:0;left:0;transform-origin:top left}
   .wrap{max-width:1040px;margin:0 auto;padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
 
+  /* A column, so the card can be grown to the height of the embed box and
+     the week still sits as a block of boxes rather than stretching. */
   .shell{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;
+    display:flex;flex-direction:column;
     animation:cardIn .45s var(--ease) both}
+  .body{flex:1;display:flex;align-items:center}
+  .week{width:100%}
   @keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   @keyframes pop{0%{opacity:0;transform:translateY(9px) scale(.97)}
                  60%{opacity:1;transform:translateY(-2px) scale(1.004)}100%{opacity:1;transform:none}}
@@ -49,19 +54,19 @@
   .range{font-size:13px;font-weight:700;white-space:nowrap;color:var(--ink)}
 
   .body{padding:10px}
-  .week{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+  .week{display:grid;grid-template-columns:repeat(var(--cols,5),minmax(0,1fr));gap:8px}
   .day{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;overflow:hidden;
     display:flex;flex-direction:column;animation:pop .38s var(--ease) backwards}
   .day.today{border-color:var(--red);box-shadow:inset 0 0 0 1px var(--red)}
   .day.off{opacity:.62}
   .day h2{margin:0;padding:8px 10px;border-bottom:1px solid var(--line);display:flex;
-    justify-content:space-between;align-items:baseline;gap:6px}
-  .day h2 .dow{font-size:15px;font-weight:800;letter-spacing:-.2px}
+    justify-content:space-between;align-items:baseline;gap:6px;flex-wrap:wrap}
+  .day h2 .dow{font-size:15px;font-weight:800;letter-spacing:-.2px;min-width:0;overflow-wrap:anywhere}
   .day h2 .dt{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px}
   .day.today h2{background:var(--red);border-bottom-color:var(--red)}
   .day.today h2 .dow,.day.today h2 .dt{color:var(--ink)}
   .db{padding:10px;display:flex;flex-direction:column;gap:8px;flex:1}
-  .feat{font-size:17px;font-weight:800;line-height:1.24;letter-spacing:-.2px}
+  .feat{font-size:17px;font-weight:800;line-height:1.24;letter-spacing:-.2px;overflow-wrap:anywhere}
   .sides{display:flex;flex-direction:column;gap:4px}
   .sides span{font-size:13px;color:var(--ink);font-weight:500;line-height:1.3;padding-left:11px;position:relative}
   .sides span::before{content:'';position:absolute;left:0;top:.46em;width:5px;height:5px;background:var(--red)}
@@ -77,13 +82,13 @@
 
   @media (hover:hover){ .nav button:hover{background:var(--line)} }
   @media (max-width:640px){
-    .week{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .week{--cols:2}
     .hd h1{font-size:17px}
     .range{width:100%;text-align:center}
   }
   /* Two columns for as long as they hold a dish name: five stacked days make
      the card so tall that fitting it to the box shrinks the text to nothing. */
-  @media (max-width:359px){ .week{grid-template-columns:1fr} }
+  @media (max-width:359px){ .week{--cols:1} }
   /* ══════════════════════════════════════════════════════════════════
      THEME — shared with the events calendar, countdowns and weather.
      This one is a card on a transparent page, so the ambient light lives
@@ -159,7 +164,7 @@
   const FALLBACK = /*FALLBACK_START*/{"generated_at":null,"schools":{}}/*FALLBACK_END*/;
 
   const $=id=>document.getElementById(id);
-  const viewEl=$('view'), fitEl=$('fit');
+  const viewEl=$('view'), fitEl=$('fit'), shellEl=document.querySelector('.shell');
   const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   let DATA={}, school=null, meal=null, monday=null;
 
@@ -207,7 +212,14 @@
                   ||items.find(i=>!isAlt(i))||items[0];
     return {feat, sides:items.filter(i=>i!==feat&&!isAlt(i)), alts:items.filter(i=>i!==feat&&isAlt(i))};
   }
-  const plain=n=>(n||'').replace(/\(\s*[A-Z]{1,3}\s*\)/g,' ').replace(/\s+/g,' ').trim();
+  // MealViewer sometimes sends names with the spaces missing
+  // ("nationalSchoolLunchWeek", "Burger PlantBased"). Put the spaces back
+  // where a lower-case letter runs straight into a capital, and start the
+  // name with a capital.
+  const unrun=t=>t.replace(/([a-z0-9])([A-Z])/g,'$1 $2')
+                  .replace(/\s+/g,' ').trim()
+                  .replace(/^[a-z]/,m=>m.toUpperCase());
+  const plain=n=>unrun((n||'').replace(/\(\s*[A-Z]{1,3}\s*\)/g,' '));
 
   function render(){ paint(); queueFit(); }
 
@@ -221,6 +233,9 @@
       return;
     }
     const grid=document.createElement('div'); grid.className='week';
+    // The fitter picks the column count: in a short box, more columns
+    // means a shorter card and therefore bigger text.
+    if(cols) grid.style.setProperty('--cols',cols);
     let shown=0;
     for(let i=0;i<5;i++){
       const d=addDays(mon,i), k=key(d), items=itemsFor(k);
@@ -268,14 +283,21 @@
   $('next').addEventListener('click',()=>{monday=addDays(monday||schoolWeek(new Date()),7);render();replay('nav-next');});
   $('tdy').addEventListener('click',()=>{monday=schoolWeek(new Date());render();});
 
-  // Fit the card to the embed box so it never scrolls.
+  // Fit the card to the embed box.
   //
-  // The scale comes from the TALLEST week in the menu, not the week on
-  // screen. A week where every day has three sides is taller than a quiet
-  // one, so scaling to the current week made the header and the text change
-  // size on every click. Measuring the whole menu once per width gives one
-  // scale that every week shares, and nothing moves while paging through.
-  let pending=false, measuring=false, measured={w:0,h:0};
+  // Two things have to be true at once. The text must not change size when
+  // you page between weeks -- so the scale is worked out from the FULLEST
+  // week in the menu, never the one on screen. And the card has to fill the
+  // box you drew in Sites, however tall you made it.
+  //
+  // The lever is the width the card is laid out at. Lay it out NARROWER than
+  // the box and scaling it back up makes everything bigger; lay it out wider
+  // and it shrinks. So: find the layout width where the fullest week, once
+  // scaled, exactly fills the box. Every week then shares that one scale,
+  // and the card is always the size of the embed.
+  const MAX_ZOOM=1.8;                 // past this, a quiet week looks silly
+  const MIN_COL=165;                  // layout px a column needs for a name
+  let pending=false, measuring=false, plan={k:'',w:0,s:1,c:0}, heaviest=null, cols=0;
 
   function weekStarts(){
     const out=new Map();
@@ -287,27 +309,85 @@
     return [...out.values()];
   }
 
-  // Height of the fullest week, at this width. Cached until the width or the
-  // data changes; the paints happen inside one frame, so none of them show.
-  function tallest(vw){
-    if(measured.w===vw && measured.h) return measured.h;
+  // Which week has the most in it. Found once per menu, then only that week
+  // gets re-measured while the width is being searched.
+  function findHeaviest(vw){
     const save=monday;
-    measuring=true;
-    let max=0;
-    weekStarts().forEach(w=>{ monday=w; paint(); max=Math.max(max, fitEl.scrollHeight); });
-    monday=save; paint();
-    measuring=false;
-    measured={w:vw,h:max};
-    return max;
+    let max=-1; heaviest=save;
+    fitEl.style.width=vw+'px';
+    weekStarts().forEach(w=>{
+      monday=w; paint();
+      const h=fitEl.scrollHeight;
+      if(h>max){ max=h; heaviest=w; }
+    });
+    monday=save;
+  }
+
+  // For one column count, the narrowest layout width whose fullest week
+  // still fits the box once scaled -- narrowest means largest text.
+  function bestFor(vw,vh,c){
+    cols=c;
+    const at=w=>{ fitEl.style.width=w+'px'; paint(); return fitEl.scrollHeight||1; };
+    const fits=w=> at(w)*(vw/w) <= vh;
+    // Never lay a column out narrower than a dish name needs. Zooming in is
+    // the same as laying out narrow, so without this floor the card fills
+    // the box beautifully and splits "Hamburger" across two lines doing it.
+    let lo=Math.max(vw/MAX_ZOOM, c*MIN_COL), hi=Math.max(lo*1.02,vw*4), W;
+    if(fits(lo))       W=lo;          // fits even at full zoom
+    else if(!fits(hi)) W=hi;          // nothing fits; the caller clamps
+    else { for(let i=0;i<8;i++){ const mid=(lo+hi)/2; if(fits(mid)) hi=mid; else lo=mid; } W=hi; }
+    const hT=at(W);
+    return {w:W, c, s:Math.min(vw/W, vh/hT)};
+  }
+
+  function makePlan(vw,vh){
+    const save=monday;
+    if(heaviest===null) findHeaviest(vw);
+    const wasCols=cols;
+    monday=heaviest;
+
+    // Five days split a few sensible ways. A tall narrow box wants one or
+    // two columns; a short wide one wants five. Whichever leaves the text
+    // biggest wins, which is the same as whichever scales up the most.
+    //
+    // With one exception: however much a split scales up, each column ends
+    // up about (box width / columns) wide on screen, so too many columns
+    // just chops dish names in half. Only splits that leave a column wide
+    // enough to hold a name are considered.
+    const options=[1,2,3,5].filter(c=>c===1||vw/c>=90);
+    let best=null;
+    options.forEach(c=>{
+      const p=bestFor(vw,vh,c);
+      if(!best || p.s>best.s+0.001) best=p;
+    });
+
+    cols=best.c; monday=save;
+    if(!best.s||!isFinite(best.s)){ cols=wasCols; best={w:vw,c:wasCols,s:1}; }
+    return {k:vw+'x'+vh, w:best.w, s:best.s, c:best.c};
   }
 
   function fit(){
     pending=false;
     const vw=document.documentElement.clientWidth, vh=document.documentElement.clientHeight;
     if(!vw||!vh) return;
-    fitEl.style.transform='none'; fitEl.style.width=vw+'px';
-    const h=Math.max(fitEl.scrollHeight, tallest(vw)), s=Math.min(1, vh/(h||1));
-    if(s<0.999){ fitEl.style.width=(vw/s)+'px'; fitEl.style.transform=`scale(${s})`; }
+    measuring=true;
+    fitEl.style.transform='none';
+    shellEl.style.minHeight='0px';
+
+    const k=vw+'x'+vh;
+    if(plan.k!==k) plan=makePlan(vw,vh);
+    const {w:W,s}=plan;
+    cols=plan.c;
+
+    fitEl.style.width=W+'px';
+    paint();                                   // back to the week on screen
+    // Grow the card so that, once scaled, it is exactly the embed box --
+    // minus the small gap around it, or the page gains a scrollbar.
+    const gap=fitEl.scrollHeight-shellEl.offsetHeight;
+    shellEl.style.minHeight=Math.max(0,vh/s-gap)+'px';
+    const dx=Math.max(0,(vw-W*s)/2);
+    fitEl.style.transform=`translateX(${dx}px) scale(${s})`;
+    measuring=false;
   }
   // measuring guard: the paints inside tallest() must not queue another fit.
   function queueFit(){ if(!pending && !measuring){ pending=true; requestAnimationFrame(fit); } }
@@ -317,7 +397,7 @@
   function fmtWhen(iso){try{return new Date(iso).toLocaleString('en-US',{month:'short',day:'numeric'});}catch(e){return '';}}
   function adopt(p){
     DATA=p; school=Object.keys(DATA.schools||{})[0]||null;
-    measured={w:0,h:0};          // new menu -> the tallest week may have changed
+    plan={k:'',w:0,s:1,c:0}; heaviest=null;  // new menu: fullest week may differ
     const ms=allMeals(); if(!ms.includes(meal)) meal=ms[0]||null;
     monday=schoolWeek(new Date());
     // If this week has nothing posted, show the nearest week that does.
