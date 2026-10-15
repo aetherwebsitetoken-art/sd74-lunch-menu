@@ -106,7 +106,11 @@ def fetch_json(url):
 
 DATE_KEYS = ("dateFull", "date_full", "date", "menuDate", "servingDate")
 NAME_KEYS = ("item_Name", "itemName", "name", "menuItemDescription", "description")
-TYPE_KEYS = ("item_Type", "itemType", "type", "category", "menuCategory")
+TYPE_KEYS = ("item_Type", "itemType", "type", "category", "menuCategory",
+             # MealViewer's own field name -- without this the categories
+             # were being ignored entirely and every item looked untyped.
+             "foodCategoryName", "food_category_name", "categoryName",
+             "itemCategory", "productCategoryName")
 BLOCK_NAME_KEYS = ("blockName", "block_Name", "mealPeriod", "name", "menuBlockName")
 
 DATE_PATTERNS = (
@@ -176,6 +180,36 @@ ALLERGEN_NAME_RE = re.compile(
     r'peanuts?|tree\s*nuts?|fish|shellfish|sesame|gluten|dairy)\s*$', re.IGNORECASE)
 
 
+# 3. Labels that leak through with no category attached: day names, meal
+#    periods, the line or school name, placeholders. Used only to judge
+#    untyped leaves, which is where this junk shows up.
+META_NAME_RE = re.compile(r"""^\s*(?:
+      (?:mon|tues|wednes|thurs|fri|satur|sun)day
+    | january|february|march|april|may|june|july|august
+    | september|october|november|december
+    | breakfast|brunch|lunch|dinner|supper|snack|a\s*la\s*carte
+    | menu|menus|line|lines|station|cafeteria|kitchen|caf[eé]
+    | school|district|elementary|middle|high|grade|campus
+    | today|tomorrow|week|day|date|notes?|info|information
+    | choice|choices|select|selection|offered|available|served
+    | n/?a|none|tbd|closed|no\s+school
+    )\s*$""", re.IGNORECASE | re.VERBOSE)
+
+
+def looks_like_dish(name):
+    """A stricter test, for items that arrived with no category at all."""
+    n = (name or "").strip()
+    if len(n) < 3 or len(n) > 60:
+        return False
+    if not re.search(r'[A-Za-z]{3}', n):          # needs actual words
+        return False
+    if META_NAME_RE.match(n):
+        return False
+    if NUTRIENT_NAME_RE.search(n) or ALLERGEN_NAME_RE.match(n):
+        return False
+    return True
+
+
 def looks_like_food(name, itype):
     """Filter out nutrition/allergen rows that share the food-item shape."""
     if NUTRIENT_NAME_RE.search(name):
@@ -218,11 +252,18 @@ def collect_items(node, _key_path=""):
 
     walk(node, _key_path)
 
-    # If anything arrived with a real category, trust those and drop the
-    # untyped leftovers -- stray metadata almost never carries a type.
+    # Anything with a real category is trusted. Untyped leaves are usually
+    # stray metadata -- but NOT always: the kitchen regularly files the day's
+    # actual dish with no category, and quietly dropping it is how "Bagel
+    # Option" ends up headlining a chicken-nugget day. So keep an untyped
+    # leaf when it reads like a dish and isn't repeating a typed one.
     typed = [it for it in out if it["type"]]
     if typed:
-        out = typed
+        have = {it["name"].strip().lower() for it in typed}
+        out = typed + [it for it in out
+                       if not it["type"]
+                       and it["name"].strip().lower() not in have
+                       and looks_like_dish(it["name"])]
 
     seen, uniq = set(), []
     for it in out:
@@ -370,6 +411,38 @@ def _words(name):
     return re.findall(r'[a-z]+', name.lower())
 
 
+# Categories that can never be the headline, whatever the name says.
+NEVER_HEADLINE_TYPE_RE = re.compile(
+    r'fruit|milk|drink|bever|juice|dessert|condiment', re.IGNORECASE)
+
+# Used only to break a tie between two candidate dishes. A starch on its own
+# is probably the side; anything naming a protein or a dish form is probably
+# the main. Nothing is excluded by this -- it only decides which goes first.
+SIDE_HINT_WORDS = {
+    "potato", "potatoes", "mash", "mashed", "fries", "tots", "tater", "tator",
+    "rice", "roll", "rolls", "bread", "breadstick", "breadsticks", "biscuit",
+    "muffin", "cornbread", "chips", "crackers", "beans", "corn", "peas",
+    "broccoli", "carrots", "salad", "coleslaw", "slaw", "gravy", "sauce",
+}
+MAIN_HINT_WORDS = {
+    "chicken", "beef", "pork", "turkey", "ham", "fish", "shrimp", "meatball",
+    "meatballs", "nugget", "nuggets", "patty", "burger", "cheeseburger",
+    "hamburger", "hotdog", "frank", "taco", "tacos", "nacho", "nachos",
+    "pizza", "sandwich", "wrap", "burrito", "quesadilla", "fajita", "fajitas",
+    "lasagna", "spaghetti", "alfredo", "penne", "ziti", "mac", "chili",
+    "stir", "bowl", "sub", "gyro", "calzone", "pasta", "noodle", "noodles",
+}
+
+
+def looks_like_side(name):
+    """A tiebreaker, not a filter: true when the name reads like a starch or
+    vegetable and names no protein or dish of its own."""
+    words = set(_words(name))
+    if words & MAIN_HINT_WORDS:
+        return False
+    return bool(words & SIDE_HINT_WORDS)
+
+
 def not_a_main(name):
     """True when every word in the name is either a modifier or something that
     is never a lunch in its own right (milk, fruit, a condiment)."""
@@ -393,6 +466,7 @@ def mark_featured(days):
         n_days = len(meal_days)
 
         side_rank = type_rank("Side")
+        fruit_rank = type_rank("Fruit")
         unknown_rank = len(TYPE_ORDER)
 
         def share(item):
@@ -412,17 +486,22 @@ def mark_featured(days):
                 return False
             return share(item) >= RECURRING_SHARE
 
-        def uncategorised_dish(item):
-            """A one-off item the kitchen never filed under a category. It's
-            almost certainly that day's real lunch, so it outranks a standing
-            alternate even though it isn't typed as an entree."""
+        def could_be_the_dish(item):
+            """A one-off item that reads like the day's actual lunch, whatever
+            category it arrived under -- or none at all.
+
+            This used to insist the item be uncategorised, which assumed the
+            kitchen either files the real dish as an "Entree" or files it
+            under nothing. It does neither reliably: put the nuggets under
+            "Side" and they were invisible to both tests, so the standing
+            bagel headlined the day. Judge the item, not its filing."""
             if item["alt"]:
                 return False
-            if type_rank(item["type"]) != unknown_rank:
+            if not_a_main(item["name"]):          # milk, fruit, a condiment
                 return False
-            if not_a_main(item["name"]):
+            if NEVER_HEADLINE_TYPE_RE.search(item["type"] or ""):
                 return False
-            return share(item) < RECURRING_SHARE
+            return share(item) < RECURRING_SHARE  # not an everyday staple
 
         for day in days.values():
             items = day.get(meal)
@@ -435,13 +514,18 @@ def mark_featured(days):
             entrees = [i for i in items if type_rank(i["type"]) < side_rank]
             # Priority:
             #   1. a real (non-alternate) entree -- the normal case;
-            #   2. a one-off dish the kitchen left uncategorised, rarest
-            #      first, so "Chicken Nuggets" beats the standing bagel;
+            #   2. a one-off dish under any other category, rarest first,
+            #      so "Chicken Nuggets" beats the standing bagel however
+            #      the kitchen happened to file it;
             #   3. any entree, alternates included -- an "option" still
             #      beats headlining a piece of fruit;
             #   4. anything non-alternate, then whatever's there.
-            loose = sorted((i for i in items if uncategorised_dish(i)),
-                           key=share)
+            # Rarest first -- the dish that makes this day different. Where
+            # the data gives no recurrence to go on, the name breaks the tie
+            # so a starch doesn't outrank the nuggets beside it.
+            loose = sorted((i for i in items if could_be_the_dish(i)),
+                           key=lambda i: (share(i), looks_like_side(i["name"]),
+                                          type_rank(i["type"])))
             pool = [i for i in entrees if not i["alt"]] \
                 or loose \
                 or entrees \
