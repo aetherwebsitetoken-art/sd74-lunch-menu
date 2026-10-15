@@ -189,7 +189,11 @@
   function schoolWeek(now){const m=mondayOf(now),w=now.getDay();return (w===0||w===6)?addDays(m,7):m;}
 
   const days=()=>(DATA.schools&&DATA.schools[school])||{};
-  const itemsFor=k=>{const d=days()[k];return (d&&d[meal])||[];};
+  // A dietary tag ("Gluten-free", "Lacto-ovo Vegetarian") is never a dish,
+  // even if an older menu.json still has one listed as an item.
+  const DIET_TAG=/^\s*(?:gluten[\s-]*free|dairy[\s-]*free|nut[\s-]*free|peanut[\s-]*free|egg[\s-]*free|soy[\s-]*free|allergen[\s-]*free|(?:lacto[\s-]*)?(?:ovo[\s-]*)?vegetarian|lacto[\s-]*ovo|vegan|plant[\s-]*based|halal|kosher|organic|local(?:ly\s+grown)?|whole[\s-]*grain(?:[\s-]*rich)?|low[\s-]*(?:fat|sodium|sugar)|reduced[\s-]*(?:fat|sodium)|contains\s+\w+|spicy|new\s+item)\s*$/i;
+  const realFood=list=>list.filter(i=>i&&!DIET_TAG.test(i.name||''));
+  const itemsFor=k=>{const d=days()[k];return realFood((d&&d[meal])||[]);};
   function allMeals(){const s=new Set();Object.values(days()).forEach(m=>Object.keys(m).forEach(x=>s.add(x)));
     return [...s].sort((a,b)=>a==='Lunch'?-1:b==='Lunch'?1:a.localeCompare(b));}
 
