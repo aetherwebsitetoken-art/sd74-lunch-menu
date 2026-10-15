@@ -160,7 +160,17 @@
   'use strict';
   // Filled in automatically by the updater. Paste week-embed.html from the
   // repository into Google Sites, not this template.
-  const MENU_URL = /*URL_START*/'menu.json'/*URL_END*/;
+  // ── If you paste THIS file into Google Sites ────────────────────────
+  // index.html and week.html are templates: the updater fills in the live
+  // link and writes embed.html / week-embed.html, and those are the ones to
+  // paste. If you paste a template instead, it has no link to follow and the
+  // page just says the menu is unavailable.
+  // Setting your GitHub username here makes the template work on its own, so
+  // it no longer matters which of the two you paste.
+  const GITHUB_USER = 'YOUR-GITHUB-USERNAME';
+  const LUNCH_REPO  = 'sd74-lunch-menu';
+  const MENU_URL = /*URL_START*/(GITHUB_USER==='YOUR-GITHUB-USERNAME' ? 'menu.json'
+    : 'https://cdn.jsdelivr.net/gh/'+GITHUB_USER+'/'+LUNCH_REPO+'@main/menu.json')/*URL_END*/;
   const FALLBACK = /*FALLBACK_START*/{"generated_at":null,"schools":{}}/*FALLBACK_END*/;
 
   const $=id=>document.getElementById(id);
@@ -366,9 +376,14 @@
     return {k:vw+'x'+vh, w:best.w, s:best.s, c:best.c};
   }
 
+  // innerWidth/innerHeight are the reliable pair inside an embed frame:
+  // they report the frame itself whatever document mode the host renders in.
+  const vpW=()=>window.innerWidth||document.documentElement.clientWidth||0;
+  const vpH=()=>window.innerHeight||document.documentElement.clientHeight||0;
+
   function fit(){
     pending=false;
-    const vw=document.documentElement.clientWidth, vh=document.documentElement.clientHeight;
+    const vw=vpW(), vh=vpH();
     if(!vw||!vh) return;
     measuring=true;
     fitEl.style.transform='none';
@@ -389,10 +404,26 @@
     fitEl.style.transform=`translateX(${dx}px) scale(${s})`;
     measuring=false;
   }
-  // measuring guard: the paints inside tallest() must not queue another fit.
+  // measuring guard: the paints inside makePlan() must not queue another fit.
   function queueFit(){ if(!pending && !measuring){ pending=true; requestAnimationFrame(fit); } }
   window.addEventListener('resize',queueFit);
   if(window.ResizeObserver) new ResizeObserver(queueFit).observe(fitEl);
+
+  // Some hosts -- Google Sites among them -- settle the embed frame to its
+  // final size after the page has already loaded, and don't always fire a
+  // resize event when they do. Fitting to the size it had on the way past
+  // leaves the card too small in the box, so watch for the box changing
+  // under us. When nothing changed this costs two property reads, and the
+  // cached plan means a real change re-measures only once.
+  let seenBox='';
+  function watchBox(){
+    const k=vpW()+'x'+vpH();
+    if(k!==seenBox && vpW() && vpH()){ seenBox=k; queueFit(); }
+  }
+  [100,350,900,2000,4000].forEach(t=>setTimeout(watchBox,t));
+  setInterval(watchBox,1000);
+  if(document.fonts&&document.fonts.ready)
+    document.fonts.ready.then(()=>{ plan={k:'',w:0,s:1,c:0}; queueFit(); });
 
   function fmtWhen(iso){try{return new Date(iso).toLocaleString('en-US',{month:'short',day:'numeric'});}catch(e){return '';}}
   function adopt(p){
