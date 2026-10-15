@@ -262,10 +262,12 @@
   .seg button.on{background:transparent;box-shadow:none;color:var(--ink)}
 
   /* Today's lunch banner: a lit plate and a slow sheen across the strip. */
+  /* A wash of warmth across the banner, not a disc: a fixed-size circle
+     inside an overflow:hidden strip reads as a cut-off highlight. This one
+     is full-bleed and fades out, so it has no edge to clip. */
   .hero-in{position:relative;overflow:hidden}
-  .hero-in::after{content:'';position:absolute;left:-40px;top:-120px;width:300px;height:300px;
-    border-radius:50%;pointer-events:none;
-    background:radial-gradient(circle,var(--red-glow),transparent 65%)}
+  .hero-in::after{content:'';position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(120% 180% at 0% 0%,rgba(212,42,60,.13),transparent 62%)}
   .hero:not(.closed) .hero-in::before{content:'';position:absolute;inset:0;pointer-events:none;
     background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.06) 50%,transparent 65%);
     transform:translateX(-120%);animation:sheen 8s ease-in-out 1.6s infinite}
@@ -347,7 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const LUNCH_REPO  = 'sd74-lunch-menu';
   const MENU_URL = /*URL_START*/'https://cdn.jsdelivr.net/gh/aetherwebsitetoken-art/sd74-lunch-menu@main/menu.json'/*URL_END*/;
   const FALLBACK = /*FALLBACK_START*/{
-  "generated_at": "2026-10-15T03:02:06.036686+00:00",
+  "generated_at": "2026-10-15T03:22:37.389286+00:00",
   "schools": {
     "Lincoln Hall": {
       "2026-10-01": {
@@ -968,10 +970,10 @@ document.addEventListener('DOMContentLoaded', () => {
       "2026-10-29": {
         "Lunch": [
           {
-            "alt": true,
+            "alt": false,
             "featured": true,
-            "name": "Bagel Option (K)(H)",
-            "type": "Entr\u00e9e"
+            "name": "gluten-free",
+            "type": ""
           },
           {
             "alt": false,
@@ -982,6 +984,16 @@ document.addEventListener('DOMContentLoaded', () => {
             "alt": false,
             "name": "Seasonal Fruit",
             "type": "Fruit"
+          },
+          {
+            "alt": false,
+            "name": "lacto-ovoVegetarian",
+            "type": ""
+          },
+          {
+            "alt": true,
+            "name": "Bagel Option (K)(H)",
+            "type": "Entr\u00e9e"
           },
           {
             "alt": true,
@@ -1068,12 +1080,29 @@ document.addEventListener('DOMContentLoaded', () => {
     if(!w.some(x=>NOT_MAIN.has(x))) return false;
     return w.every(x=>NOT_MAIN.has(x)||MODIFIER.has(x));
   }
+  // Mirrors fetch_menu.py: a category that can never headline, and a
+  // name-based tiebreak between a main and the starch next to it.
+  const NEVER_HEAD=/fruit|milk|drink|bever|juice|dessert|condiment/i;
+  const SIDE_HINT=new Set(('potato potatoes mash mashed fries tots tater tator rice roll rolls '
+    +'bread breadstick breadsticks biscuit muffin cornbread chips crackers beans corn peas '
+    +'broccoli carrots salad coleslaw slaw gravy sauce').split(' '));
+  const MAIN_HINT=new Set(('chicken beef pork turkey ham fish shrimp meatball meatballs nugget '
+    +'nuggets patty burger cheeseburger hamburger hotdog frank taco tacos nacho nachos pizza '
+    +'sandwich wrap burrito quesadilla fajita fajitas lasagna spaghetti alfredo penne ziti mac '
+    +'chili stir bowl sub gyro calzone pasta noodle noodles').split(' '));
+  function looksLikeSide(name){
+    const w=new Set((name||'').toLowerCase().match(/[a-z]+/g)||[]);
+    for(const x of w) if(MAIN_HINT.has(x)) return false;
+    for(const x of w) if(SIDE_HINT.has(x)) return true;
+    return false;
+  }
   function parts(items){
     if(!items.length) return {feat:null,sides:[],alts:[]};
     let feat=items.find(i=>i.featured);
     const isAlt=i=>i.alt!==undefined?i.alt:ALT_RE.test(i.name);
     if(!feat) feat=items.find(i=>ENTREE_RE.test(i.type||'')&&!isAlt(i))
-                  ||items.find(i=>!isAlt(i)&&!KNOWN_TYPE_RE.test(i.type||'')&&!notAMain(i.name))
+                  ||items.find(i=>!isAlt(i)&&!NEVER_HEAD.test(i.type||'')&&!notAMain(i.name)&&!looksLikeSide(i.name))
+                  ||items.find(i=>!isAlt(i)&&!NEVER_HEAD.test(i.type||'')&&!notAMain(i.name))
                   ||items.find(i=>ENTREE_RE.test(i.type||''))
                   ||items.find(i=>!isAlt(i))||items[0];
     return {

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-15T03:02:06.036686+00:00",
+  "generated_at": "2026-10-15T03:22:37.389286+00:00",
   "schools": {
     "Lincoln Hall": {
       "2026-10-01": {
@@ -620,10 +620,10 @@
       "2026-10-29": {
         "Lunch": [
           {
-            "alt": true,
+            "alt": false,
             "featured": true,
-            "name": "Bagel Option (K)(H)",
-            "type": "Entr\u00e9e"
+            "name": "gluten-free",
+            "type": ""
           },
           {
             "alt": false,
@@ -634,6 +634,16 @@
             "alt": false,
             "name": "Seasonal Fruit",
             "type": "Fruit"
+          },
+          {
+            "alt": false,
+            "name": "lacto-ovoVegetarian",
+            "type": ""
+          },
+          {
+            "alt": true,
+            "name": "Bagel Option (K)(H)",
+            "type": "Entr\u00e9e"
           },
           {
             "alt": true,
