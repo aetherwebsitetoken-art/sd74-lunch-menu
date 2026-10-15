@@ -336,9 +336,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // TEMPLATE. Don't paste this file into Google Sites -- paste embed.html
   // from the repository. The updater builds embed.html from this template
   // on every run, with the two lines below filled in.
+  // ── If you paste THIS file into Google Sites ────────────────────────
+  // index.html and week.html are templates: the updater fills in the live
+  // link and writes embed.html / week-embed.html, and those are the ones to
+  // paste. If you paste a template instead, it has no link to follow and the
+  // page just says the menu is unavailable.
+  // Setting your GitHub username here makes the template work on its own, so
+  // it no longer matters which of the two you paste.
+  const GITHUB_USER = 'YOUR-GITHUB-USERNAME';
+  const LUNCH_REPO  = 'sd74-lunch-menu';
   const MENU_URL = /*URL_START*/'https://cdn.jsdelivr.net/gh/aetherwebsitetoken-art/sd74-lunch-menu@main/menu.json'/*URL_END*/;
   const FALLBACK = /*FALLBACK_START*/{
-  "generated_at": "2026-10-15T00:22:38.005318+00:00",
+  "generated_at": "2026-10-15T03:02:06.036686+00:00",
   "schools": {
     "Lincoln Hall": {
       "2026-10-01": {
@@ -1310,8 +1319,23 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   let fitTimer=null;
-  window.addEventListener('resize',()=>{ clearTimeout(fitTimer);
-    fitTimer=setTimeout(()=>{ fitMonth(); fitWeek(); },120); });
+  const refit=()=>{ clearTimeout(fitTimer);
+    fitTimer=setTimeout(()=>{ fitMonth(); fitWeek(); },120); };
+  window.addEventListener('resize',refit);
+
+  // Some hosts -- Google Sites among them -- settle the embed frame to its
+  // final size after load without firing a resize event. Watch for the box
+  // changing under us so the text isn't sized for a frame that no longer
+  // exists; two property reads when nothing has moved.
+  let seenBox='';
+  function watchBox(){
+    const w=window.innerWidth||document.documentElement.clientWidth||0;
+    const h=window.innerHeight||document.documentElement.clientHeight||0;
+    const k=w+'x'+h;
+    if(w&&h&&k!==seenBox){ seenBox=k; refit(); }
+  }
+  [100,350,900,2000,4000].forEach(t=>setTimeout(watchBox,t));
+  setInterval(watchBox,1000);
 
   // ---------- Render ----------
   const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
