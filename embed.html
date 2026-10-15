@@ -119,14 +119,15 @@
     transition:transform .18s var(--ease),background .18s,border-color .18s}
   .day.today{border-color:var(--red);box-shadow:inset 0 0 0 1px var(--red)}
   .day.off{opacity:.6}
+  /* wraps rather than overflowing when a card gets very narrow */
   .day h2{margin:0;padding:11px 13px;border-bottom:1px solid var(--line);
-    display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-  .day h2 .dow{font-size:15px;font-weight:700;letter-spacing:-.2px}
+    display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .day h2 .dow{font-size:15px;font-weight:700;letter-spacing:-.2px;min-width:0;overflow-wrap:anywhere}
   .day h2 .dt{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.6px}
   .day.today h2{background:var(--red);border-bottom-color:var(--red)}
   .day.today h2 .dow,.day.today h2 .dt{color:var(--ink)}
   .db{padding:13px;flex:1;display:flex;flex-direction:column;gap:11px}
-  .feat{font-size:15px;font-weight:800;line-height:1.3;letter-spacing:-.3px}
+  .feat{font-size:15px;font-weight:800;line-height:1.3;letter-spacing:-.3px;overflow-wrap:anywhere}
   .lunchtag{display:inline-block;align-self:flex-start;margin-bottom:6px;font-size:9px;font-weight:800;letter-spacing:1.2px;
     text-transform:uppercase;padding:3px 8px;border-radius:5px;background:var(--red);color:var(--ink)}
   .sect{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.1px;color:var(--muted);margin-bottom:5px}
@@ -337,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // on every run, with the two lines below filled in.
   const MENU_URL = /*URL_START*/'https://cdn.jsdelivr.net/gh/aetherwebsitetoken-art/sd74-lunch-menu@main/menu.json'/*URL_END*/;
   const FALLBACK = /*FALLBACK_START*/{
-  "generated_at": "2026-10-14T23:27:23.087793+00:00",
+  "generated_at": "2026-10-15T00:17:11.036257+00:00",
   "schools": {
     "Lincoln Hall": {
       "2026-10-01": {
@@ -1073,14 +1074,21 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
+  // MealViewer sometimes sends names with the spaces missing
+  // ("nationalSchoolLunchWeek", "Burger PlantBased"). Put the spaces back
+  // where a lower-case letter runs straight into a capital, and start the
+  // name with a capital.
+  const unrun=t=>t.replace(/([a-z0-9])([A-Z])/g,'$1 $2')
+                  .replace(/\s+/g,' ').trim()
+                  .replace(/^[a-z]/,m=>m.toUpperCase());
   // Menu names often carry codes like "(K)(H)" and run words together
   // ("Beef(H)Homemade"). Split the codes out and show them as small tags
   // rather than guessing what each one stands for.
   function nameNode(name,cls){
     const el=document.createElement('span'); if(cls) el.className=cls;
     const codes=[];
-    let text=(name||'').replace(/\(\s*([A-Z]{1,3})\s*\)/g,(_,c)=>{codes.push(c);return ' ';})
-                       .replace(/\s+/g,' ').replace(/\s+,/g,',').trim();
+    let text=unrun((name||'').replace(/\(\s*([A-Z]{1,3})\s*\)/g,(_,c)=>{codes.push(c);return ' ';}))
+                       .replace(/\s+,/g,',');
     text=text.replace(/\s+Option$/i,'').trim()||name;
     el.appendChild(document.createTextNode(text));
     [...new Set(codes)].forEach(c=>{
@@ -1088,7 +1096,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     return el;
   }
-  const plainName=n=>(n||'').replace(/\(\s*[A-Z]{1,3}\s*\)/g,' ').replace(/\s+/g,' ').trim();
+  const plainName=n=>unrun((n||'').replace(/\(\s*[A-Z]{1,3}\s*\)/g,' '));
 
   // A little food emoji for the banner, picked from the dish name.
   function emojiFor(n){
