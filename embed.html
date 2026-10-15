@@ -235,7 +235,6 @@
   body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
     background:repeating-linear-gradient(0deg,transparent 0 46px,rgba(255,255,255,.012) 46px 47px)}
   .bar{background-color:rgba(37,37,42,.86)}
-  .hero{background-color:rgba(28,28,31,.72)}
 
   .mark{border-radius:10px;border-color:transparent;position:relative;overflow:hidden;
     background:linear-gradient(145deg,var(--red),var(--red-dark));
@@ -261,17 +260,9 @@
   .seg button{position:relative;z-index:1;border-radius:var(--r-sm)}
   .seg button.on{background:transparent;box-shadow:none;color:var(--ink)}
 
-  /* Today's lunch banner: a lit plate and a slow sheen across the strip. */
-  /* A wash of warmth across the banner, not a disc: a fixed-size circle
-     inside an overflow:hidden strip reads as a cut-off highlight. This one
-     is full-bleed and fades out, so it has no edge to clip. */
-  .hero-in{position:relative;overflow:hidden}
-  .hero-in::after{content:'';position:absolute;inset:0;pointer-events:none;
-    background:radial-gradient(120% 180% at 0% 0%,rgba(212,42,60,.13),transparent 62%)}
-  .hero:not(.closed) .hero-in::before{content:'';position:absolute;inset:0;pointer-events:none;
-    background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.06) 50%,transparent 65%);
-    transform:translateX(-120%);animation:sheen 8s ease-in-out 1.6s infinite}
-  @keyframes sheen{0%,62%{transform:translateX(-120%)}88%,100%{transform:translateX(120%)}}
+  /* Today's lunch banner: plain and opaque. No wash, no sheen, and a solid
+     background so the page's ambient light can't tint it from behind. */
+  .hero{background-color:var(--bg)}
   .plate{border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.34)}
   .tag{border-radius:999px}
 
@@ -295,7 +286,6 @@
     *,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}
     .page,.day,.cell{opacity:1!important;transform:none!important}
     body::before{animation:none}
-    .hero-in::before{display:none}
   }
 </style>
 </head>
@@ -349,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const LUNCH_REPO  = 'sd74-lunch-menu';
   const MENU_URL = /*URL_START*/'https://cdn.jsdelivr.net/gh/aetherwebsitetoken-art/sd74-lunch-menu@main/menu.json'/*URL_END*/;
   const FALLBACK = /*FALLBACK_START*/{
-  "generated_at": "2026-10-15T03:32:26.635527+00:00",
+  "generated_at": "2026-10-15T03:41:32.405496+00:00",
   "schools": {
     "Lincoln Hall": {
       "2026-10-01": {
@@ -1046,7 +1036,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ---------- Data access ----------
   const schoolDays=()=>(DATA.schools&&DATA.schools[school])||{};
-  const itemsFor=k=>{const d=schoolDays()[k];return (d&&d[meal])||[];};
+  // A dietary tag ("Gluten-free", "Lacto-ovo Vegetarian") is never a dish,
+  // even if an older menu.json still has one listed as an item.
+  const DIET_TAG=/^\s*(?:gluten[\s-]*free|dairy[\s-]*free|nut[\s-]*free|peanut[\s-]*free|egg[\s-]*free|soy[\s-]*free|allergen[\s-]*free|(?:lacto[\s-]*)?(?:ovo[\s-]*)?vegetarian|lacto[\s-]*ovo|vegan|plant[\s-]*based|halal|kosher|organic|local(?:ly\s+grown)?|whole[\s-]*grain(?:[\s-]*rich)?|low[\s-]*(?:fat|sodium|sugar)|reduced[\s-]*(?:fat|sodium)|contains\s+\w+|spicy|new\s+item)\s*$/i;
+  const realFood=list=>list.filter(i=>i&&!DIET_TAG.test(i.name||''));
+  const itemsFor=k=>{const d=schoolDays()[k];return realFood((d&&d[meal])||[]);};
 
   function allMeals(){
     const set=new Set();
