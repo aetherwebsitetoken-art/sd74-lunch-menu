@@ -106,6 +106,8 @@ def fetch_json(url):
 
 DATE_KEYS = ("dateFull", "date_full", "date", "menuDate", "servingDate")
 NAME_KEYS = ("item_Name", "itemName", "name", "menuItemDescription", "description")
+# The subset that only a menu item ever carries -- never a line or a block.
+ITEM_NAME_KEYS = ("item_Name", "itemName", "menuItemDescription", "foodItemName")
 TYPE_KEYS = ("item_Type", "itemType", "type", "category", "menuCategory",
              # MealViewer's own field name -- without this the categories
              # were being ignored entirely and every item looked untyped.
@@ -166,14 +168,31 @@ def iter_dicts(node):
 # or the menu fills up with "Calcium (mg)", "Wheat", "No Known Allergens".
 
 # 1. Never descend into a branch whose key says it holds nutrition/allergens.
-SKIP_BRANCH_RE = re.compile(r'nutrient|nutrition|allergen|vitamin|mineral', re.IGNORECASE)
+# Dietary tags ("Gluten-free", "Lacto-ovo Vegetarian") arrive as a little
+# list INSIDE the dish they describe. Skipping those branches does two jobs:
+# the tags never get collected as if they were food, and the dish carrying
+# them still counts as a single item -- otherwise "Chicken Nuggets" was
+# thrown out for having tags, and its tag headlined the day instead.
+SKIP_BRANCH_RE = re.compile(
+    r'nutrient|nutrition|allergen|vitamin|mineral|'
+    r'trait|diet|icon|badge|attribute|restriction|certification|preference',
+    re.IGNORECASE)
 
 # 2. Reject names that are obviously a measurement or an allergen label.
+# Matched against the WHOLE name (a label, optionally with an amount), so a
+# dish that merely starts with one of these words survives. It used to match
+# just the start, which quietly deleted "Protein Box Option" from every day
+# it was on -- mistaken for a "Protein: 12g" row.
+_NUTRIENT_WORDS = (
+    r'(?:calories|calorie|protein|sodium|sugars?|added\s+sugars?|fiber|fibre|'
+    r'dietary\s+fiber|cholesterol|potassium|calcium|iron|carbohydrates?|'
+    r'total\s+carbs?|total\s+fat|sat\.?\s*fat|saturated\s+fat|trans\s*fat|'
+    r'vitamin\s+\w+|serving\s+size)')
 NUTRIENT_NAME_RE = re.compile(
-    r'^\s*(calories|calorie|protein|sodium|sugars?|fiber|fibre|cholesterol|'
-    r'potassium|calcium|iron|carbohydrates?|total\s+carbs?|total\s+fat|'
-    r'sat\.?\s*fat|saturated\s+fat|trans\s*fat|vitamin\s+\w+|serving\s+size)'
-    r'\b|\((?:mg|g|iu|mcg|kcal)\)\s*$', re.IGNORECASE)
+    r'^\s*' + _NUTRIENT_WORDS +
+    r'\s*(?:[:\-]?\s*[\d.,]+\s*(?:mg|g|iu|mcg|kcal|cal|%)?)?'
+    r'\s*(?:\((?:mg|g|iu|mcg|kcal|%)\))?\s*$'
+    r'|\((?:mg|g|iu|mcg|kcal)\)\s*$', re.IGNORECASE)
 
 ALLERGEN_NAME_RE = re.compile(
     r'^\s*(no known allergens|contains|may contain|wheat|soy|soybeans?|milk|egg|eggs|'
@@ -205,14 +224,32 @@ def looks_like_dish(name):
         return False
     if META_NAME_RE.match(n):
         return False
+    # "Cafeteria Line", "Grill Station": the name of a place, not a dish.
+    # ("Salad Bar" and "Potato Bar" are dishes, so "bar" stays out of this.)
+    if re.search(r'\b(?:line|lines|station|stations|menu|kitchen|counter)\s*$', n, re.I):
+        return False
     if NUTRIENT_NAME_RE.search(n) or ALLERGEN_NAME_RE.match(n):
         return False
     return True
 
 
+# A name that is only a dietary label. Matched against the WHOLE name, so
+# "Vegetarian Chili" or "Burger Plant Based" are still food.
+DIET_NAME_RE = re.compile(r"""^\s*(?:
+      gluten[\s-]*free | dairy[\s-]*free | nut[\s-]*free | peanut[\s-]*free
+    | egg[\s-]*free | soy[\s-]*free | allergen[\s-]*free
+    | (?:lacto[\s-]*)?(?:ovo[\s-]*)?vegetarian | lacto[\s-]*ovo | vegan
+    | plant[\s-]*based | halal | kosher | organic | local(?:ly\s+grown)?
+    | whole[\s-]*grain(?:[\s-]*rich)? | low[\s-]*(?:fat|sodium|sugar)
+    | reduced[\s-]*(?:fat|sodium) | contains\s+\w+ | spicy | new\s+item
+    )\s*$""", re.IGNORECASE | re.VERBOSE)
+
+
 def looks_like_food(name, itype):
     """Filter out nutrition/allergen rows that share the food-item shape."""
     if NUTRIENT_NAME_RE.search(name):
+        return False
+    if DIET_NAME_RE.match(name):            # a tag, never a dish
         return False
     # "Milk" and "Egg" are real allergen labels but also real menu items --
     # so only reject them when they arrive with no food category attached.
@@ -236,14 +273,26 @@ def collect_items(node, _key_path=""):
             itype = itype.strip() if isinstance(itype, str) else ""
             if isinstance(name, str):
                 nm = name.strip()
-                # A container (a line or block) also has a name; a real item
-                # is a leaf -- it holds no further non-nutrition collections.
+                # A field that only ever names a menu item ("itemName"), as
+                # opposed to a generic "name" that a line or block also has.
+                item_key = any(k in n for k in ITEM_NAME_KEYS)
                 has_children = any(
                     isinstance(v, (list, dict)) and v
                     for k, v in n.items() if not SKIP_BRANCH_RE.search(k))
-                if nm and len(nm) <= 120 and not has_children \
-                        and looks_like_food(nm, itype):
+                # A dish named by an item field IS a dish, whatever is nested
+                # inside it. Insisting on "nothing nested" is what threw out
+                # "Chicken Nuggets": MealViewer hangs its dietary tags off the
+                # dish, so a tagged dish looked like a container -- and every
+                # tagged dish vanished, leaving its tags behind as "food".
+                # Generic names still need to be leaves, so a cafeteria line
+                # called "Main Line" is never mistaken for a dish.
+                is_item = item_key or not has_children
+                if nm and len(nm) <= 120 and is_item and looks_like_food(nm, itype):
                     out.append({"name": nm, "type": itype})
+                if item_key:
+                    # Don't go looking for more food inside a dish: all that
+                    # lives there is its tags, icons and nutrition.
+                    return
             for k, v in n.items():
                 walk(v, k)
         elif isinstance(n, list):
