@@ -54,7 +54,17 @@ jobs:
       - name: Refresh jsDelivr CDN cache
         if: steps.commit.outputs.changed == 'true'
         run: |
+          # Purging the instant the push lands is a race: if jsDelivr re-reads
+          # the file before GitHub has finished publishing the new commit, it
+          # caches the OLD copy again -- for up to 12 hours. So wait for GitHub
+          # first, purge, then purge once more a little later to catch any
+          # edge that refilled early.
           REPO="${GITHUB_REPOSITORY}"
-          curl -s "https://purge.jsdelivr.net/gh/${REPO}@main/menu.json" || true
-          curl -s "https://purge.jsdelivr.net/gh/${REPO}@main/embed.html" || true
-          curl -s "https://purge.jsdelivr.net/gh/${REPO}@main/week-embed.html" || true
+          sleep 30
+          for pass in 1 2; do
+            for f in menu.json embed.html week-embed.html; do
+              curl -s -o /dev/null -w "purge $f (pass $pass): HTTP %{http_code}\n" \
+                "https://purge.jsdelivr.net/gh/${REPO}@main/$f" || true
+            done
+            if [ "$pass" = 1 ]; then sleep 45; fi
+          done
