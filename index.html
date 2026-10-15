@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SD74 Lunch Menu</title>
+<title>Lincolnwood SD74 Calendar</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -11,20 +11,28 @@
   *,*::before,*::after{box-sizing:border-box}
   :root{
     --font:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
-    --bg:#1c1c1f; --panel:#25252a; --panel-2:#2e2e34; --line:#3b3b42;
-    --red:#d42a3c; --red-dark:#9c1426; --ink:#f5f5f3; --muted:#a8a8b1;
+    --bg:#1c1c1f;        /* charcoal background */
+    --panel:#25252a;     /* panels / cards */
+    --panel-2:#2e2e34;   /* inner areas */
+    --line:#3b3b42;      /* borders */
+    --red:#d42a3c;       /* accent */
+    --red-dark:#9c1426;  /* button shadows */
+    --ink:#f5f5f3;       /* text */
+    --muted:#a8a8b1;     /* secondary text */
+    --c:var(--red);      /* per-event accent, set by the script */
     --ease:cubic-bezier(.22,.8,.26,1);
   }
   html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
     font-family:var(--font);-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%}
   button{font-family:inherit;color:inherit}
-  button,.cell,.day{-webkit-tap-highlight-color:transparent}
+  button,.cell,.chip,.card{-webkit-tap-highlight-color:transparent}
   button:focus-visible,.cell:focus-visible{outline:3px solid var(--red);outline-offset:2px}
-  ::-webkit-scrollbar{width:9px}
+  ::-webkit-scrollbar{width:9px;height:9px}
   ::-webkit-scrollbar-track{background:var(--bg)}
   ::-webkit-scrollbar-thumb{background:var(--line);border-radius:5px}
 
-  .page{display:flex;flex-direction:column;height:100%;opacity:0;animation:fade .4s var(--ease) forwards}
+  .page{display:flex;flex-direction:column;width:100%;height:100%;
+    opacity:0;animation:fade .4s var(--ease) forwards}
   @keyframes fade{to{opacity:1}}
   @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
   @keyframes pop{0%{opacity:0;transform:translateY(10px) scale(.97)}
@@ -33,192 +41,228 @@
   @keyframes inFromRight{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:none}}
   @keyframes inFromLeft{from{opacity:0;transform:translateX(-26px)}to{opacity:1;transform:none}}
   @keyframes slideUpIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-  @keyframes dishIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @keyframes pulseRed{0%{box-shadow:0 0 0 0 var(--red)}70%{box-shadow:0 0 0 7px transparent}
+                      100%{box-shadow:0 0 0 0 transparent}}
 
   /* ---------- Header ---------- */
-  .bar{flex-shrink:0;background:var(--panel);border-bottom:1px solid var(--line)}
-  .bar-in{max-width:1200px;margin:0 auto;width:100%;padding:11px 16px;
-    display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap}
+  .top{flex-shrink:0;background:var(--panel);border-bottom:1px solid var(--line)}
+  .top-in{max-width:1600px;margin:0 auto;width:100%;padding:11px 16px;
+    display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap}
   .brand{display:flex;align-items:center;gap:11px;flex-shrink:0}
   .mark{width:38px;height:38px;border-radius:7px;flex-shrink:0;
     background:repeating-linear-gradient(135deg,var(--red) 0 7px,var(--panel-2) 7px 14px);
     border:1px solid var(--line);transition:transform .3s var(--ease)}
   .brand:hover .mark{transform:rotate(8deg) scale(1.05)}
   .brand h1{margin:0;font-size:19px;font-weight:700;letter-spacing:-.2px;line-height:1.1}
-  .brand h1 span{color:var(--red)}
   .brand p{margin:3px 0 0;font-size:11px;color:var(--muted);font-weight:500}
 
-  .ctrls{display:flex;align-items:center;gap:10px;margin-left:auto;flex-wrap:wrap}
-  .seg{display:flex;background:var(--panel-2);border:1px solid var(--line);
-    border-radius:8px;padding:3px;gap:3px;flex-shrink:0}
-  .seg button{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:13px;
-    font-weight:700;padding:7px 15px;border-radius:6px;transition:background .18s,color .18s}
-  .seg button.on{background:var(--red);color:var(--ink);box-shadow:0 3px 0 var(--red-dark)}
-
-  .nav{display:flex;align-items:center;gap:8px}
-  .nav .arw{width:36px;height:36px;border-radius:7px;border:1px solid var(--line);background:var(--panel-2);
-    color:var(--ink);font-size:18px;line-height:1;cursor:pointer;flex-shrink:0;display:flex;
-    align-items:center;justify-content:center;box-shadow:0 3px 0 var(--bg);
+  .nav{display:flex;align-items:center;gap:9px;margin-left:auto}
+  .nav button.arrow{width:36px;height:36px;border-radius:7px;border:1px solid var(--line);
+    background:var(--panel-2);color:var(--ink);font-size:18px;line-height:1;cursor:pointer;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;box-shadow:0 3px 0 var(--bg);
     transition:background .15s,transform .08s linear,box-shadow .08s linear}
-  .nav .arw:active{transform:translateY(2px);box-shadow:0 1px 0 var(--bg)}
-  .nav .lbl{min-width:132px;text-align:center;white-space:nowrap;display:flex;flex-direction:column;line-height:1.2}
-  .nav .lbl b{font-size:13.5px;font-weight:700;letter-spacing:-.2px}
-  .status{font-size:10px;color:var(--muted);font-weight:500}
-  .nav .tdy{border:1px solid var(--line);background:var(--panel-2);color:var(--muted);cursor:pointer;
-    border-radius:7px;padding:9px 14px;font-size:12px;font-weight:700;white-space:nowrap;
+  .nav button.arrow:active{transform:translateY(2px);box-shadow:0 1px 0 var(--bg)}
+  .mlabel{text-align:center;min-width:176px;flex-shrink:0}
+  .mlabel h2{margin:0;font-size:17px;font-weight:700;letter-spacing:-.2px;white-space:nowrap;display:inline-block}
+  .mlabel h2.flip{animation:flip .32s var(--ease)}
+  @keyframes flip{0%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:none}}
+  .status{font-size:10px;color:var(--muted);margin:2px 0 0;min-height:12px;font-weight:500}
+  .today-btn{border:1px solid var(--line);background:var(--panel-2);color:var(--muted);cursor:pointer;
+    font-size:12px;font-weight:700;padding:9px 14px;border-radius:7px;white-space:nowrap;flex-shrink:0;
     box-shadow:0 3px 0 var(--bg);transition:background .15s,color .15s,transform .08s linear,box-shadow .08s linear}
-  .nav .tdy:active{transform:translateY(2px);box-shadow:0 1px 0 var(--bg)}
+  .today-btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--bg)}
 
-  /* ---------- Today's lunch banner ---------- */
-  .hero{flex-shrink:0;border-bottom:1px solid var(--line);background:var(--bg)}
-  .hero-in{position:relative;max-width:1200px;margin:0 auto;padding:14px 16px;
-    display:flex;gap:16px;align-items:center}
-  .plate{width:58px;height:58px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;
-    justify-content:center;font-size:28px;background:var(--panel-2);border:1px solid var(--line)}
-  .hero .txt{min-width:0;flex:1}
-  .hero .when{font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--red)}
-  .hero .dish{font-size:clamp(21px,3.1vw,30px);font-weight:800;line-height:1.14;letter-spacing:-.8px;
-    margin:4px 0 9px;animation:dishIn .4s var(--ease)}
-  .tags{display:flex;flex-wrap:wrap;gap:7px}
-  .tag{font-size:12px;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);
-    padding:5px 11px;border-radius:6px}
-  .hero .opts{font-size:11.5px;color:var(--muted);margin-top:9px}
-  .tog{border:1px solid var(--line);background:var(--panel-2);flex-shrink:0;
-    color:var(--muted);font-size:12px;font-weight:700;padding:8px 13px;border-radius:7px;cursor:pointer;
-    display:flex;align-items:center;gap:6px;box-shadow:0 3px 0 var(--bg);
-    transition:background .15s,color .15s,transform .08s linear,box-shadow .08s linear}
-  .tog:active{transform:translateY(2px);box-shadow:0 1px 0 var(--bg)}
-  .tog .chev{display:inline-block;transition:transform .25s var(--ease)}
-  .hero.closed .tog .chev{transform:rotate(180deg)}
-  .hero.closed .hero-in{padding:10px 16px}
-  .hero.closed .plate,.hero.closed .tags,.hero.closed .opts{display:none}
-  .hero.closed .txt{display:flex;align-items:baseline;gap:11px;min-width:0}
-  .hero.closed .when{flex-shrink:0}
-  .hero.closed .dish{font-size:15px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .views{display:flex;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:8px;padding:3px;gap:3px;flex-shrink:0}
+  .views button{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:13px;
+    font-weight:700;padding:7px 15px;border-radius:6px;transition:background .18s,color .18s}
+  .views button.on{background:var(--red);color:var(--ink);box-shadow:0 3px 0 var(--red-dark)}
 
-  main{flex:1;min-height:0;overflow:hidden}
-  .wrap{max-width:1200px;margin:0 auto;padding:12px 14px 14px;height:100%;
-    display:flex;flex-direction:column}
-  #view{flex:1;min-height:0;display:flex;flex-direction:column}
+  /* ---------- Next-up strip ---------- */
+  .strip{flex-shrink:0;background:var(--bg);border-bottom:1px solid var(--line)}
+  .strip-in{max-width:1600px;margin:0 auto;width:100%;padding:10px 16px;
+    display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap}
+  .next{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;flex:1;min-width:0}
+  .next .lab{font-size:12px;color:var(--muted);font-weight:600;flex-shrink:0}
+  .next .dot{width:9px;height:9px;border-radius:2px;flex-shrink:0;align-self:center}
+  .next .m{font-weight:700;font-size:14px}
+  .next .d{font-size:13px;color:var(--muted)}
+  .chips{display:flex;flex-direction:column;align-items:flex-start;gap:5px;flex-shrink:0}
+  .chip{border:1px solid var(--line);background:var(--panel-2);color:var(--muted);
+    font-size:11px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer;
+    text-align:left;white-space:nowrap;
+    box-shadow:0 3px 0 var(--bg);transition:background .15s,color .15s,transform .08s linear,box-shadow .08s linear}
+  .chip:active{transform:translateY(2px);box-shadow:0 1px 0 var(--bg)}
+  .chip.on{background:var(--red);border-color:var(--red);color:var(--ink);box-shadow:0 3px 0 var(--red-dark)}
+  .chip.on:active{box-shadow:0 1px 0 var(--red-dark)}
+  .chip.on.district{background:var(--panel-2);border-color:var(--muted);color:var(--ink);
+    box-shadow:0 3px 0 var(--bg)}
 
-  /* ---------- Week view ---------- */
-  .week{--wf:15px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;
-    grid-auto-rows:auto;align-content:start}
-  .week .day{overflow:hidden}
-  .week .feat{font-size:var(--wf)}
-  .week .sides span,.week .off-note{font-size:calc(var(--wf)*.85)}
-  .week .alts > span{font-size:calc(var(--wf)*.78)}
-  .week .sect{font-size:calc(var(--wf)*.63)}
-  .week .db{padding:calc(var(--wf)*.7);gap:calc(var(--wf)*.55)}
-  .week .alts{padding:calc(var(--wf)*.55) calc(var(--wf)*.65)}
-  .week.noalts .alts{display:none}
-  #view.nav-next{animation:inFromRight .34s var(--ease)}
-  #view.nav-prev{animation:inFromLeft .34s var(--ease)}
-  .day{background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden;
-    display:flex;flex-direction:column;animation:pop .4s var(--ease) backwards;
-    transition:transform .18s var(--ease),background .18s,border-color .18s}
-  .day.today{border-color:var(--red);box-shadow:inset 0 0 0 1px var(--red)}
-  .day.off{opacity:.6}
-  /* wraps rather than overflowing when a card gets very narrow */
-  .day h2{margin:0;padding:11px 13px;border-bottom:1px solid var(--line);
-    display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
-  .day h2 .dow{font-size:15px;font-weight:700;letter-spacing:-.2px;min-width:0;overflow-wrap:anywhere}
-  .day h2 .dt{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.6px}
-  .day.today h2{background:var(--red);border-bottom-color:var(--red)}
-  .day.today h2 .dow,.day.today h2 .dt{color:var(--ink)}
-  .db{padding:13px;flex:1;display:flex;flex-direction:column;gap:11px}
-  .feat{font-size:15px;font-weight:800;line-height:1.3;letter-spacing:-.3px;overflow-wrap:anywhere}
-  .lunchtag{display:inline-block;align-self:flex-start;margin-bottom:6px;font-size:9px;font-weight:800;letter-spacing:1.2px;
-    text-transform:uppercase;padding:3px 8px;border-radius:5px;background:var(--red);color:var(--ink)}
-  .sect{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.1px;color:var(--muted);margin-bottom:5px}
-  .sides{display:flex;flex-direction:column;gap:5px}
-  .sides span{font-size:13px;color:var(--muted);line-height:1.35;padding-left:12px;position:relative}
-  .sides span::before{content:'';position:absolute;left:0;top:.5em;width:5px;height:5px;background:var(--red)}
-  .alts{margin-top:auto;background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:10px 12px}
-  .alts > span{display:block;font-size:12px;color:var(--muted);line-height:1.45}
-  .off-note{font-size:13px;color:var(--muted)}
-  .code{display:inline-block;font-size:9px;font-weight:700;color:var(--muted);
-    border:1px solid var(--line);border-radius:4px;padding:0 4px;margin-left:4px;vertical-align:1px;line-height:1.5}
+  /* "Next up" as a real card with a red edge, like the quiz question card */
+  .hero-row{align-items:stretch;gap:9px;padding-top:7px;padding-bottom:9px}
+  .next{position:relative;display:flex;flex-direction:column;justify-content:center;gap:1px;flex:1;min-width:0;
+    padding-right:112px;
+    background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--red);
+    border-radius:8px;padding:8px 13px;animation:rise .35s var(--ease) both}
+  .next .lab{font-size:10.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--red)}
+  .next .m{font-size:clamp(15px,1.9vw,19px);font-weight:800;letter-spacing:-.4px;line-height:1.15;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .next .d{font-size:12.5px;color:var(--muted)}
+  .next .dot{display:none}
+  .next .cd{position:absolute;right:13px;top:50%;transform:translateY(-50%);background:var(--panel-2);
+    border:1px solid var(--line);border-radius:6px;padding:5px 10px;font-size:11.5px;font-weight:700;
+    color:var(--ink);white-space:nowrap}
+  .next .cd b{color:var(--red);font-weight:800}
 
-  /* ---------- Month view ---------- */
-  .mhead{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:7px}
-  .mhead div{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.1px;
-    color:var(--muted);text-align:center}
-  .month{--mf:13px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
-  .cell{background:var(--panel);border:1px solid var(--line);border-radius:8px;min-height:96px;
-    padding:10px 11px;display:flex;flex-direction:column;gap:5px;cursor:pointer;
-    animation:pop .34s var(--ease) backwards;
-    transition:transform .18s var(--ease),background .18s,border-color .18s}
-  .cell.out{background:transparent;border-style:dashed;cursor:default;opacity:.5}
-  .cell.empty{background:var(--bg)}
+
+  main{flex:1;min-height:0;width:100%;position:relative}
+  .panel{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;
+    transition:opacity .32s var(--ease),transform .32s var(--ease)}
+  /* Offsets apply only while a panel is hidden -- scoped with :not(.on) so
+     the active panel is never shifted off-screen. */
+  #pMonth:not(.on){transform:translateX(-22px)}
+  #pAgenda:not(.on){transform:translateX(22px)}
+  .panel.on{opacity:1;pointer-events:auto;transform:none}
+  .wrap{max-width:1600px;margin:0 auto;width:100%;height:100%;display:flex;flex-direction:column}
+
+  /* ---------- Month grid ---------- */
+  .dow{display:grid;grid-template-columns:minmax(0,.62fr) repeat(5,minmax(0,1fr)) minmax(0,.62fr);
+    flex-shrink:0;padding:10px 12px 6px}
+  .dow div{text-align:center;font-size:11px;font-weight:700;color:var(--muted);
+    text-transform:uppercase;letter-spacing:1.1px}
+  .grid{display:grid;grid-template-columns:minmax(0,.62fr) repeat(5,minmax(0,1fr)) minmax(0,.62fr);
+    grid-auto-rows:minmax(0,1fr);gap:7px;flex:1;min-height:0;overflow:hidden;padding:0 12px 12px}
+  .cell{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px;
+    overflow:hidden;display:flex;flex-direction:column;position:relative;
+    transition:transform .18s var(--ease),background .18s,border-color .18s;
+    animation:pop .38s var(--ease) backwards}
+  .cell.has{cursor:pointer}
+  .cell.pad{background:transparent;border-style:dashed}
   .cell.today{border-color:var(--red);box-shadow:inset 0 0 0 1px var(--red)}
-  .cell .n{font-size:calc(var(--mf)*.9);font-weight:700;color:var(--muted)}
-  .cell.today .n{color:var(--red)}
-  .cell .f{font-size:var(--mf);font-weight:700;line-height:1.22}
-  .cell .s{font-size:calc(var(--mf)*.8);color:var(--muted);line-height:1.3;margin-top:auto}
-  .month.compact .s{display:none}
-  .month.breakwords .f,.month.breakwords .s{overflow-wrap:anywhere;hyphens:auto}
+  .cell.today .num{animation:pulseRed 2.6s ease-out .5s 2}
+  .grid.nav-next{animation:inFromRight .34s var(--ease)}
+  .grid.nav-prev{animation:inFromLeft .34s var(--ease)}
+  .num{font-size:clamp(12.5px,.85vw,14px);font-weight:700;color:var(--muted);width:24px;height:24px;
+    flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:5px;margin-bottom:4px}
+  .cell.today .num{background:var(--red);color:var(--ink)}
+  .pills{display:flex;flex-direction:column;gap:3px;overflow:hidden;flex:1}
+  .pill{font-size:clamp(10.5px,.78vw,12.5px);line-height:1.3;padding:3px 6px;border-radius:5px;
+    background:var(--panel-2);border-left:3px solid var(--c);color:var(--ink);
+    overflow:hidden;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;
+    -webkit-box-orient:vertical;flex-shrink:0;transition:background .15s}
+  .pill.status{color:var(--muted);font-weight:700}
+  .more{font-size:10.5px;color:var(--muted);font-weight:700;padding-left:4px}
+  .dots{display:flex;gap:4px;margin-top:auto;padding-top:3px}
+  .dots i{width:8px;height:8px;border-radius:2px;background:var(--c)}
 
-  /* Month "fit" mode: the whole month on screen, no scrolling, so it can be
-     captured in a single screenshot. */
-  .month{flex:1;min-height:0;grid-auto-rows:minmax(0,1fr)}
-  .month .cell{min-height:0;overflow:hidden;padding:calc(var(--mf)*.55) calc(var(--mf)*.62);
-    gap:calc(var(--mf)*.3)}
-  .note{display:none}
-
-
-  .empty-state{padding:60px 20px;text-align:center;color:var(--muted);font-size:14px;line-height:1.7}
-  .empty-state b{display:block;color:var(--ink);font-size:16px;margin-bottom:8px}
+  /* ---------- Agenda ---------- */
+  .agenda{flex:1;min-height:0;overflow-y:auto;padding:14px 16px 28px}
+  .grp{margin-bottom:20px}
+  .grp.past{opacity:.5}
+  .grp h3{font-size:13px;font-weight:700;margin:0 0 9px;padding-bottom:7px;
+    border-bottom:1px solid var(--line);color:var(--muted)}
+  .divider{display:flex;align-items:center;gap:10px;margin:6px 0 22px;color:var(--red)}
+  .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--line)}
+  .divider span{font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+  .card{display:flex;gap:13px;padding:13px 15px;margin-bottom:8px;background:var(--panel);
+    border:1px solid var(--line);border-left:4px solid var(--c);border-radius:8px;
+    animation:cardinPop .4s var(--ease) backwards;
+    transition:background .18s,transform .18s}
+  @keyframes cardin{to{opacity:1;transform:none}}
+  @keyframes cardinPop{0%{opacity:0;transform:translateX(-14px)}
+                       70%{opacity:1;transform:translateX(2px)}
+                       100%{opacity:1;transform:none}}
+  .card .ico{font-size:21px;flex-shrink:0;line-height:1.3}
+  .card .bd{flex:1;min-width:0}
+  .card .sp{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.3px}
+  .card .tag{display:inline-block;margin-bottom:5px;font-size:9.5px;font-weight:800;letter-spacing:1.2px;
+    text-transform:uppercase;padding:3px 8px;border-radius:5px;background:var(--red);color:var(--ink)}
+  .card .tag.alt{background:var(--panel-2);border:1px solid var(--line);color:var(--muted)}
+  .card .mt{font-size:15.5px;font-weight:700;margin:3px 0 5px}
+  .meta{display:flex;flex-wrap:wrap;gap:4px 15px;font-size:12.5px;color:var(--muted)}
+  .meta strong{color:var(--ink);font-weight:600}
+  .note{display:inline-block;margin-top:5px;font-size:12px;font-weight:700;
+    background:var(--panel-2);border:1px solid var(--line);padding:3px 9px;border-radius:5px;color:var(--ink)}
+  .empty{padding:56px 20px;text-align:center;color:var(--muted);font-size:14px;line-height:1.7}
+  .empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:8px}
   .retry{margin-top:16px;background:var(--red);color:var(--ink);border:1px solid var(--red);
     padding:11px 20px;border-radius:7px;font-weight:700;font-size:13px;cursor:pointer;
     box-shadow:0 4px 0 var(--red-dark);transition:transform .08s linear,box-shadow .08s linear}
   .retry:active{transform:translateY(3px);box-shadow:0 1px 0 var(--red-dark)}
-  .note{text-align:center;font-size:11.5px;color:var(--muted);margin:20px 0 0;line-height:1.6}
+
+  /* ---------- Day dialog ---------- */
+  .back{position:fixed;inset:0;z-index:50;background:rgba(28,28,31,.88);display:none;
+    align-items:center;justify-content:center;padding:18px;opacity:0;transition:opacity .2s}
+  .back.on{display:flex;opacity:1}
+  .box{width:100%;max-width:560px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    transform:scale(.94) translateY(12px);opacity:0;
+    transition:transform .26s var(--ease),opacity .26s var(--ease)}
+  .back.on .box{transform:none;opacity:1}
+  .hd{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:16px 18px;
+    border-bottom:1px solid var(--line);border-top:4px solid var(--red);border-radius:10px 10px 0 0}
+  .hd h3{margin:0;font-size:17px;font-weight:700;letter-spacing:-.2px}
+  .x{width:32px;height:32px;border-radius:7px;border:1px solid var(--line);background:var(--panel-2);
+    color:var(--ink);cursor:pointer;font-size:15px;flex-shrink:0;transition:background .15s}
+  .bdy{padding:16px;overflow-y:auto;flex:1;background:var(--bg)}
+  .bdy .card{margin-bottom:9px}
+  .ft{padding:13px 16px;border-top:1px solid var(--line);display:flex;justify-content:flex-end}
+  .close{background:var(--red);border:1px solid var(--red);color:var(--ink);padding:10px 22px;
+    border-radius:7px;font-weight:700;font-size:13.5px;cursor:pointer;box-shadow:0 4px 0 var(--red-dark);
+    transition:transform .08s linear,box-shadow .08s linear}
+  .close:active{transform:translateY(3px);box-shadow:0 1px 0 var(--red-dark)}
 
   @media (hover:hover){
-    .day:hover{background:var(--panel-2);border-color:var(--muted);transform:translateY(-2px)}
-    .cell:not(.out):hover{background:var(--panel-2);border-color:var(--muted);transform:translateY(-2px)}
-    .tog:hover,.nav .arw:hover,.nav .tdy:hover{background:var(--line);color:var(--ink)}
-    .seg button:not(.on):hover{color:var(--ink);background:var(--line)}
-    .retry:hover,.seg button.on:hover{background:var(--red)}
+    .cell.has:hover{background:var(--panel-2);border-color:var(--muted);transform:translateY(-2px);z-index:2}
+    .card:hover{background:var(--panel-2);transform:translateX(3px)}
+    .nav button.arrow:hover,.today-btn:hover,.x:hover,.chip:hover{background:var(--line);color:var(--ink)}
+    .chip.on:hover,.retry:hover,.close:hover{background:var(--red)}
+    .views button:not(.on):hover{color:var(--ink);background:var(--line)}
   }
 
-  @media (max-width:900px){ .week{grid-template-columns:repeat(2,minmax(0,1fr))} }
   @media (max-width:640px){
-    .bar-in{padding:9px 12px;gap:8px 10px}
+    .chips{width:auto}
+    .hero-row{flex-direction:column;gap:7px}
+    .next{padding-right:13px}
+    .next .cd{position:static;transform:none;margin-top:5px;align-self:flex-start}
+    .next .m{white-space:normal}
+    .top-in{padding:9px 12px;gap:8px 10px}
     .brand p{display:none}
-    .brand h1{font-size:17px}
+    .brand h1{font-size:16px}
     .mark{width:32px;height:32px}
-    .ctrls{display:contents}
-    .ctrls > .seg:not(#meals){order:2;margin-left:auto}
-    #meals{order:4}
-    .nav{order:3;width:100%}
-    .nav .lbl{min-width:0;flex:1}
-    .nav .arw{width:40px;height:40px;font-size:20px}
-    .nav .tdy{padding:9px 13px}
-    .seg button{padding:7px 12px}
-    .hero-in{padding:12px;gap:12px}
-    .plate{width:44px;height:44px;font-size:22px}
-
-    .tog{padding:7px 10px}
-    .hero.closed .hero-in{padding:9px 12px}
-    .hero.closed .dish{font-size:14px}
-    .week{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
-    .wrap{padding:12px 11px 30px}
-    .month,.mhead{gap:5px}
-    .mhead div{font-size:10px}
-    .cell{min-height:64px;padding:7px;border-radius:7px}
+    .views{order:2;margin-left:auto}
+    .views button{padding:7px 12px}
+    .nav{order:3;width:100%;margin-left:0}
+    .mlabel{min-width:0;flex:1}
+    .mlabel h2{font-size:15px}
+    .nav button.arrow{width:40px;height:40px;font-size:20px}
+    .today-btn{padding:9px 13px}
+    .strip-in{padding:9px 12px;gap:8px;flex-wrap:nowrap}
+    .next{flex-wrap:nowrap;overflow:hidden}
+    .next .d{display:none}
+    .next .m{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+    .chip{padding:5px 9px;font-size:10.5px}
+    .dow{padding:8px 8px 5px}
+    .grid{grid-auto-rows:minmax(0,1fr);gap:5px;padding:0 8px 10px}
+    .cell{padding:6px;border-radius:7px}
+    .pill,.more{display:none}
+    .dots{display:flex;gap:4px}
+    .agenda{padding:12px 12px 24px}
   }
+  @media (min-width:641px){.dots{display:none}}
   @media (max-height:500px) and (orientation:landscape){
-    .bar-in{padding:6px 14px}
+    .top-in{padding:6px 14px}
     .brand p{display:none}
     .mark{width:30px;height:30px}
-    .hero-in{padding:9px 14px}
-    .plate{width:40px;height:40px;font-size:20px}
-    .hero .dish{font-size:19px;margin:2px 0 5px}
+    .strip-in{padding:6px 14px}
+    .next .d{display:none}
+    .dow{padding:6px 10px 4px}
+    .grid{grid-auto-rows:minmax(0,1fr)}
   }
   /* ══════════════════════════════════════════════════════════════════
-     THEME — shared with the events calendar, countdowns and weather.
+     THEME — softer corners, warmer light, springier motion.
+     Shared with the lunch menu, countdowns and weather so the whole set
+     of embeds reads as one thing.
      ══════════════════════════════════════════════════════════════════ */
   :root{
     --spring:cubic-bezier(.34,1.56,.64,1);
@@ -226,6 +270,10 @@
     --green:#3fa860; --gold:#d9a52b; --blue:#3f7fd6;
     --r-lg:16px; --r-md:11px; --r-sm:8px;
   }
+
+  /* Ambient light. A red bloom at the top, a cool one low and opposite,
+     and hairline rules for texture. The drift is a transform on one fixed
+     layer, so it stays on the compositor and costs no layout. */
   body::before{content:'';position:fixed;inset:-30%;z-index:-1;pointer-events:none;
     background:
       radial-gradient(640px 440px at 24% 8%,rgba(212,42,60,.14),transparent 70%),
@@ -234,48 +282,52 @@
   @keyframes drift{from{transform:translate3d(0,0,0)}to{transform:translate3d(2.5%,-2%,0)}}
   body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
     background:repeating-linear-gradient(0deg,transparent 0 46px,rgba(255,255,255,.012) 46px 47px)}
-  .bar{background-color:rgba(37,37,42,.86)}
-  .hero{background-color:rgba(28,28,31,.72)}
+  .top,.strip{background-color:rgba(37,37,42,.86)}
+  .strip{background-color:rgba(28,28,31,.72)}
 
+  /* Brand mark: solid gradient tile with a soft red halo. */
   .mark{border-radius:10px;border-color:transparent;position:relative;overflow:hidden;
     background:linear-gradient(145deg,var(--red),var(--red-dark));
-    box-shadow:0 4px 14px var(--red-glow);transition:transform .35s var(--spring)}
-  .mark::after{content:'';position:absolute;inset:0;
+    box-shadow:0 4px 14px var(--red-glow);
+    transition:transform .35s var(--spring)}
+  .mark::after{content:'';position:absolute;inset:0;   /* keeps the old stripes */
     background:repeating-linear-gradient(135deg,rgba(255,255,255,.16) 0 6px,transparent 6px 12px)}
   .brand:hover .mark{transform:rotate(-8deg) scale(1.08)}
 
-  .nav .arw,.nav .tdy,.tog{border-radius:var(--r-md);
+  /* Controls: rounder, with a spring on press and a lift on hover. */
+  .nav button.arrow,.today-btn,.chip{border-radius:var(--r-md);
     transition:background .18s,color .18s,border-color .18s,
                transform .22s var(--spring),box-shadow .18s}
-  .nav .arw:active,.nav .tdy:active,.tog:active{transform:translateY(2px) scale(.96)}
+  .nav button.arrow:active,.today-btn:active,.chip:active{transform:translateY(2px) scale(.96)}
   @media (hover:hover){
-    .nav .arw:hover,.nav .tdy:hover,.tog:hover{background:var(--line);border-color:#55555e}
+    .nav button.arrow:hover,.today-btn:hover{background:var(--line);border-color:#55555e}
+    .chip:not(.on):hover{color:var(--ink);border-color:#55555e}
   }
 
-  /* Week / Month switch with a thumb that slides across. */
-  .seg{position:relative;border-radius:var(--r-md);overflow:hidden}
-  .seg .thumb{position:absolute;top:3px;left:0;height:calc(100% - 6px);width:0;
+  /* Month / Agenda switch, with a thumb that slides between them. */
+  .views{position:relative;border-radius:var(--r-md);overflow:hidden}
+  .views .thumb{position:absolute;top:3px;left:0;height:calc(100% - 6px);width:0;
     border-radius:var(--r-sm);background:var(--red);box-shadow:0 2px 10px var(--red-glow);
     transition:transform .42s var(--spring),width .42s var(--spring);z-index:0}
-  .seg .thumb.init{transition:none}
-  .seg button{position:relative;z-index:1;border-radius:var(--r-sm)}
-  .seg button.on{background:transparent;box-shadow:none;color:var(--ink)}
+  .views .thumb.init{transition:none}
+  .views button{position:relative;z-index:1;border-radius:var(--r-sm)}
+  .views button.on{background:transparent;box-shadow:none;color:var(--ink)}
 
-  /* Today's lunch banner: a lit plate and a slow sheen across the strip. */
-  /* A wash of warmth across the banner, not a disc: a fixed-size circle
-     inside an overflow:hidden strip reads as a cut-off highlight. This one
-     is full-bleed and fades out, so it has no edge to clip. */
-  .hero-in{position:relative;overflow:hidden}
-  .hero-in::after{content:'';position:absolute;inset:0;pointer-events:none;
-    background:radial-gradient(120% 180% at 0% 0%,rgba(212,42,60,.13),transparent 62%)}
-  .hero:not(.closed) .hero-in::before{content:'';position:absolute;inset:0;pointer-events:none;
-    background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.06) 50%,transparent 65%);
-    transform:translateX(-120%);animation:sheen 8s ease-in-out 1.6s infinite}
+  /* "Next up" hero: rounder, with a glow in the corner and a slow sheen. */
+  .next{border-radius:var(--r-lg);overflow:hidden;
+    background:linear-gradient(150deg,#2a2a30,#232328 62%)}
+  /* Full-bleed wash rather than a disc -- a sized circle inside a clipped
+     card shows up as a cut-off highlight. */
+  .next::after{content:'';position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(130% 200% at 100% 0%,rgba(212,42,60,.17),transparent 60%)}
+  .next::before{content:'';position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.07) 50%,transparent 65%);
+    transform:translateX(-120%);animation:sheen 7s ease-in-out 1.4s infinite}
   @keyframes sheen{0%,62%{transform:translateX(-120%)}88%,100%{transform:translateX(120%)}}
-  .plate{border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.34)}
-  .tag{border-radius:999px}
+  .next .cd{border-radius:999px}
 
-  /* A breathing green dot when the menu came down live. */
+  /* A live dot next to the status line: green and breathing when the
+     schedule came down fresh, flat grey when it's the saved copy. */
   .status::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;
     background:var(--muted);margin-right:5px;vertical-align:1px}
   .status.live::before{background:var(--green);animation:livePulse 2.4s ease-out infinite}
@@ -283,562 +335,600 @@
                        70%{box-shadow:0 0 0 6px rgba(63,168,96,0)}
                        100%{box-shadow:0 0 0 0 rgba(63,168,96,0)}}
 
-  .day{border-radius:var(--r-md);
-    transition:transform .22s var(--spring),border-color .18s,box-shadow .22s}
-  .day.today{box-shadow:inset 0 0 0 1px var(--red),0 0 20px -6px var(--red-glow)}
+  /* Day cells and agenda cards. */
+  .cell{border-radius:var(--r-md);
+    transition:transform .22s var(--spring),background .18s,border-color .18s,box-shadow .22s}
+  .cell.today{box-shadow:inset 0 0 0 1px var(--red),0 0 18px -6px var(--red-glow)}
   @media (hover:hover){
-    .day:hover{transform:translateY(-3px);border-color:#55555e;box-shadow:0 12px 26px rgba(0,0,0,.32)}
+    .cell.has:hover{transform:translateY(-3px);border-color:#55555e;
+      box-shadow:0 12px 26px rgba(0,0,0,.34)}
   }
-  .lunchtag{border-radius:999px}
+  .pill{border-radius:6px}
+  .num{border-radius:7px}
+  .dots i{border-radius:3px}
+  .card{border-radius:var(--r-md);transition:transform .22s var(--spring),background .18s,box-shadow .22s}
+  @media (hover:hover){
+    .card:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(0,0,0,.3)}
+  }
+
+  /* Modal: rounder, and it springs in rather than sliding. */
+  .modal .box,.modal .mbox,.modal > div{border-radius:var(--r-lg)}
+  .modal.on .box,.modal.on .mbox{transition:transform .4s var(--spring),opacity .26s}
 
   @media (prefers-reduced-motion:reduce){
     *,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}
-    .page,.day,.cell{opacity:1!important;transform:none!important}
+    .page,.cell,.card{opacity:1!important;transform:none!important}
     body::before{animation:none}
-    .hero-in::before{display:none}
+    .next::before{display:none}
   }
 </style>
 </head>
 <body>
 <div class="page">
-  <header class="bar">
-    <div class="bar-in">
+  <header class="top">
+    <div class="top-in">
       <div class="brand">
         <div class="mark" aria-hidden="true"></div>
-        <div><h1>SD74 <span>Lunch</span></h1><p>Lincolnwood School District 74</p></div>
+        <div><h1>Lincolnwood SD74</h1><p>Sports &amp; School Events</p></div>
       </div>
-      <div class="ctrls">
-        <div class="seg" id="meals" role="tablist" aria-label="Meal"></div>
-        <div class="seg" role="tablist" aria-label="View">
-          <button id="vWeek" class="on">Week</button>
-          <button id="vMonth">Month</button>
-        </div>
-        <div class="nav">
-          <button class="arw" id="prev" aria-label="Previous">‹</button>
-          <span class="lbl"><b id="lbl">Loading…</b><small class="status" id="status">&nbsp;</small></span>
-          <button class="arw" id="next" aria-label="Next">›</button>
-          <button class="tdy" id="tdy">Today</button>
-        </div>
+      <div class="nav">
+        <button id="prev" class="arrow" aria-label="Previous month">‹</button>
+        <div class="mlabel"><h2 id="month"></h2><p class="status" id="status">&nbsp;</p></div>
+        <button id="next" class="arrow" aria-label="Next month">›</button>
+        <button class="today-btn" id="todayBtn">Today</button>
+      </div>
+      <div class="views" role="tablist" aria-label="View">
+        <button id="vMonth" class="on" role="tab" aria-selected="true">Month</button>
+        <button id="vAgenda" role="tab" aria-selected="false">Agenda</button>
       </div>
     </div>
   </header>
 
-  <section class="hero" id="hero"></section>
+  <section class="strip">
+    <div class="strip-in hero-row">
+      <div class="next" id="next-up"><span class="lab">Loading schedule…</span></div>
+      <div class="chips" id="chips"></div>
+    </div>
+  </section>
 
-  <main id="main"><div class="wrap">
-    <div id="view"></div>
-    <p class="note" id="note"></p>
-  </div></main>
+  <main>
+    <div class="panel on" id="pMonth">
+      <div class="wrap">
+        <div class="dow"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div>
+        <div class="grid" id="grid"></div>
+      </div>
+    </div>
+    <div class="panel" id="pAgenda"><div class="wrap"><div class="agenda" id="agenda"></div></div></div>
+  </main>
+</div>
+
+<div class="back" id="modal">
+  <div class="box">
+    <div class="hd"><h3 id="mTitle"></h3><button class="x" id="mX" aria-label="Close">✕</button></div>
+    <div class="bdy" id="mBody"></div>
+    <div class="ft"><button class="close" id="mClose">Close</button></div>
+  </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   'use strict';
 
+  // ─────────────────────────────────────────────────────────────────
   // TEMPLATE. Don't paste this file into Google Sites -- paste embed.html
-  // from the repository. The updater builds embed.html from this template
-  // on every run, with the two lines below filled in.
-  // ── If you paste THIS file into Google Sites ────────────────────────
-  // index.html and week.html are templates: the updater fills in the live
-  // link and writes embed.html / week-embed.html, and those are the ones to
-  // paste. If you paste a template instead, it has no link to follow and the
-  // page just says the menu is unavailable.
-  // Setting your GitHub username here makes the template work on its own, so
-  // it no longer matters which of the two you paste.
-  const GITHUB_USER = 'YOUR-GITHUB-USERNAME';
-  const LUNCH_REPO  = 'sd74-lunch-menu';
-  const MENU_URL = /*URL_START*/(GITHUB_USER==='YOUR-GITHUB-USERNAME' ? 'menu.json'
-    : 'https://cdn.jsdelivr.net/gh/'+GITHUB_USER+'/'+LUNCH_REPO+'@main/menu.json')/*URL_END*/;
-  const FALLBACK = /*FALLBACK_START*/{"generated_at":null,"schools":{}}/*FALLBACK_END*/;
+  // from the repository, which the updater builds from this template.
+  // WHERE THE LIVE SCHEDULE COMES FROM
+  //
+  // Leave as 'events.json' if this file is hosted as its own page
+  // (GitHub Pages / jsDelivr / Firebase).
+  //
+  // If you PASTE this whole file into Google Sites (Insert → Embed →
+  // Embed code), change it to the full jsDelivr URL, e.g.
+  // 'https://cdn.jsdelivr.net/gh/YOUR-USERNAME/lincoln-hall-calendar@main/events.json'
+  // ─────────────────────────────────────────────────────────────────
+  const EVENTS_JSON_URL = /*URL_START*/'events.json'/*URL_END*/;
 
-  let DATA={}, school=null, meal=null, mode='week', anchor=null, heroOpen=true;
+  // Sport styling. Palette is strictly red / white / black; sports
+  // alternate red vs black accents, with the icon carrying the rest.
+  const SPORTS = {
+    soccer:     {c:'var(--ink)', i:'⚽', label:'Soccer'},
+    volleyball: {c:'var(--red)', i:'🏐', label:'Volleyball'},
+    basketball: {c:'var(--ink)', i:'🏀', label:'Basketball'},
+    other:      {c:'var(--red)', i:'🏅', label:'Other'},
+    // District-wide calendar entries
+    // District-side entries use a neutral grey so they read as clearly
+    // separate from athletics, which are red and white. (On this dark
+    // background a literal black would be invisible.)
+    district:   {c:'var(--muted)', i:'📅', label:'District Event'},
+    noschool:   {c:'var(--muted)', i:'🚫', label:'No School'},
+    halfday:    {c:'var(--muted)', i:'🕧', label:'Half Day'},
+    school:     {c:'var(--muted)', i:'🏫', label:'School Day'}
+  };
+  const meta = t => SPORTS[t] || SPORTS.other;
 
-  const $=id=>document.getElementById(id);
-  const mainEl=$('main'), viewEl=$('view'), hero=$('hero'), lbl=$('lbl'), statusEl=$('status'),
+  // Filter chips group by category rather than by individual type, so the
+  // row stays short as more sports and event kinds appear.
+  const CATS = {
+    sports:   {i:'🏆', label:'Sports'},
+    district: {i:'📅', label:'District'}
+  };
+  // Half days and no-school days sit under District alongside ordinary
+  // district events. Listed explicitly so an event that arrives without a
+  // category still lands in the right bucket.
+  const DISTRICT_TYPES = ['district','noschool','halfday','school'];
+  // Trust the stored category only if it's one the page knows about;
+  // otherwise derive it from the event type, so stale data can't hide events.
+  const catOf = e => (e.cat && CATS[e.cat]) ? e.cat
+    : (DISTRICT_TYPES.includes(e.type) ? 'district' : 'sports');
 
-        mealsEl=$('meals'), noteEl=$('note');
+  // Offline fallback: real Fall 2026 games, used only if the live fetch
+  // fails so the page is never blank. Status line says which is showing.
+  const FALLBACK = /*FALLBACK_START*/{
+    "2026-09-08":[{sport:"Girls Varsity Volleyball",match:"Lincoln Hall vs Park View",loc:"Niles West",time:"4:15 PM",note:"2-0 (Win)",ref:"Moy",type:"volleyball"},
+                  {sport:"Boys JV Soccer",match:"Golf vs Lincoln Hall",loc:"Golf",time:"4:00 PM",note:"4-0 (Win)",ref:"",type:"soccer"}],
+    "2026-09-09":[{sport:"Boys Varsity Soccer",match:"Fairview vs Lincoln Hall",loc:"Fairview",time:"4:00 PM",note:"5-3 (Win)",ref:"",type:"soccer"}],
+    "2026-09-10":[{sport:"Girls Varsity Volleyball",match:"Lincoln Hall vs Golf",loc:"Lincoln Hall",time:"4:00 PM",note:"2-1 (Win)",ref:"Moy",type:"volleyball"}],
+    "2026-09-11":[{sport:"Boys Varsity Soccer",match:"Lincoln vs Lincoln Hall",loc:"Lincoln",time:"4:15 PM",note:"5-1 (Win)",ref:"",type:"soccer"}],
+    "2026-09-17":[{sport:"Boys Varsity Soccer",match:"Park View vs Lincoln Hall",loc:"Park View",time:"4:00 PM",note:"",ref:"",type:"soccer"},
+                  {sport:"Girls Varsity Volleyball",match:"Lincoln Hall vs East Prairie",loc:"Lincoln Hall",time:"4:15 PM",note:"",ref:"Moy",type:"volleyball"}],
+    "2026-09-22":[{sport:"Girls Varsity Volleyball",match:"Lincoln Hall vs Old Orchard",loc:"Lincoln Hall",time:"4:15 PM",note:"",ref:"Moy",type:"volleyball"}],
+    "2026-09-25":[{sport:"Boys Varsity Soccer",match:"Lincoln Hall vs McCracken",loc:"Lincoln Hall",time:"4:00 PM",note:"",ref:"",type:"soccer"}],
+    "2026-09-29":[{sport:"Boys Varsity Soccer",match:"Lincoln Hall vs Golf",loc:"Lincoln Hall",time:"4:00 PM",note:"",ref:"",type:"soccer"}],
+    "2026-10-05":[{sport:"Girls Varsity Volleyball",match:"Park View vs Lincoln Hall",loc:"Park View",time:"5:00 PM",note:"",ref:"",type:"volleyball"}],
+    "2026-10-07":[{sport:"Boys Varsity Soccer",match:"Old Orchard vs Lincoln Hall",loc:"Old Orchard",time:"4:00 PM",note:"",ref:"",type:"soccer"}]
+  }/*FALLBACK_END*/;
 
-  // ---------- Dates ----------
-  const pad=n=>n<10?'0'+n:''+n;
-  const key=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-  const fromKey=k=>{const [y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d);};
-  const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
-  const fmt=(d,o)=>d.toLocaleDateString('en-US',o);
-  const TODAY=key(new Date());
+  // ── State ──────────────────────────────────────────────────────────
+  let DATA = {};                 // { "YYYY-MM-DD": [event, ...] }
+  let cursor = new Date();       // month being displayed
+  let view = window.innerWidth < 641 ? 'agenda' : 'month';
+  let activeSports = null;       // null = show all
+  let agendaScrolled = false;
 
-  function mondayOf(d){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-((x.getDay()+6)%7));return x;}
-  // Saturday/Sunday belong to the week ahead, not the one just finished.
-  function schoolWeekMonday(now){
-    const m=mondayOf(now),dow=now.getDay();
-    return (dow===0||dow===6)?addDays(m,7):m;
+  const $ = id => document.getElementById(id);
+  const grid=$('grid'), agenda=$('agenda'), monthEl=$('month'), statusEl=$('status'),
+
+        nextUp=$('next-up'), chips=$('chips'), modal=$('modal'),
+        mTitle=$('mTitle'), mBody=$('mBody');
+
+  const MONTHS = ["January","February","March","April","May","June","July",
+                  "August","September","October","November","December"];
+
+  const pad = n => n < 10 ? '0'+n : ''+n;
+  const key = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const fromKey = k => { const [y,m,d] = k.split('-').map(Number); return new Date(y,m-1,d); };
+  const TODAY = key(new Date());
+  const longDate  = k => fromKey(k).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  const shortDate = k => fromKey(k).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+
+  // Events on a date, after category filtering.
+  function eventsOn(k){
+    const list = DATA[k] || [];
+    if (!activeSports || !activeSports.size) return list;
+    return list.filter(e => activeSports.has(catOf(e)));
+  }
+  function datesWithEvents(){
+    return Object.keys(DATA).filter(k => eventsOn(k).length).sort();
   }
 
-  // ---------- Data access ----------
-  const schoolDays=()=>(DATA.schools&&DATA.schools[school])||{};
-  const itemsFor=k=>{const d=schoolDays()[k];return (d&&d[meal])||[];};
+  // ── Event card (agenda + modal) ────────────────────────────────────
+  function card(ev, i){
+    const m = meta(ev.type);
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.style.setProperty('--c', m.c);
+    el.style.animationDelay = `${Math.min(i||0,8)*40}ms`;
 
-  function allMeals(){
-    const set=new Set();
-    Object.values(schoolDays()).forEach(m=>Object.keys(m).forEach(x=>set.add(x)));
-    return [...set].sort((a,b)=>a==='Lunch'?-1:b==='Lunch'?1:a.localeCompare(b));
-  }
+    const ico = document.createElement('div');
+    ico.className = 'ico'; ico.textContent = m.i;
 
-  // The fetcher marks each day's real lunch ("featured") and the daily
-  // fallback choices ("alt"). Older data without those flags falls back to
-  // treating the first entree-like item as the headline.
-  const ENTREE_RE=/entr[ée]e|main|hot\s*food|featured/i;
-  const ALT_RE=/\b(option|alternate)\b/i;
-  // A category the kitchen actually filed the item under. Anything else
-  // (blank, or a one-off name) means uncategorised -- usually the day's real
-  // dish, so it may headline ahead of a standing option. Mirrors fetch_menu.py.
-  const KNOWN_TYPE_RE=/entr|main|hot\s*food|featured|side|veg|fruit|grain|milk|condiment|drink|bever/i;
-  const NOT_MAIN=new Set(('milk juice water lemonade tea coffee cocoa soda fruit fruits apple apples '
-    +'applesauce banana bananas orange oranges mandarin mandarins grape grapes berry berries strawberry '
-    +'strawberries blueberry blueberries melon watermelon cantaloupe kiwi pear pears peach peaches '
-    +'pineapple plum plums raisin raisins craisins vegetable vegetables veggie veggies carrot carrots '
-    +'celery broccoli cauliflower cucumber cucumbers condiment condiments ketchup mustard mayo '
-    +'dressing ranch syrup butter jelly jam').split(' '));
-  const MODIFIER=new Set(('fresh freshly assorted asst variety choice chilled cold hot sliced diced cut '
-    +'whole baby mini small large cup cups bowl side sides serving of and or with w the a an low reduced '
-    +'fat free nonfat skim unsweetened canned frozen seasonal local oz ct each individual packet pack').split(' '));
-  // True when every word is a modifier or something that is never a lunch in
-  // its own right -- "Fresh Orange" is, "Orange Chicken" is not.
-  function notAMain(name){
-    const w=(name||'').toLowerCase().match(/[a-z]+/g)||[];
-    if(!w.length) return true;
-    if(!w.some(x=>NOT_MAIN.has(x))) return false;
-    return w.every(x=>NOT_MAIN.has(x)||MODIFIER.has(x));
-  }
-  // Mirrors fetch_menu.py: a category that can never headline, and a
-  // name-based tiebreak between a main and the starch next to it.
-  const NEVER_HEAD=/fruit|milk|drink|bever|juice|dessert|condiment/i;
-  const SIDE_HINT=new Set(('potato potatoes mash mashed fries tots tater tator rice roll rolls '
-    +'bread breadstick breadsticks biscuit muffin cornbread chips crackers beans corn peas '
-    +'broccoli carrots salad coleslaw slaw gravy sauce').split(' '));
-  const MAIN_HINT=new Set(('chicken beef pork turkey ham fish shrimp meatball meatballs nugget '
-    +'nuggets patty burger cheeseburger hamburger hotdog frank taco tacos nacho nachos pizza '
-    +'sandwich wrap burrito quesadilla fajita fajitas lasagna spaghetti alfredo penne ziti mac '
-    +'chili stir bowl sub gyro calzone pasta noodle noodles').split(' '));
-  function looksLikeSide(name){
-    const w=new Set((name||'').toLowerCase().match(/[a-z]+/g)||[]);
-    for(const x of w) if(MAIN_HINT.has(x)) return false;
-    for(const x of w) if(SIDE_HINT.has(x)) return true;
-    return false;
-  }
-  function parts(items){
-    if(!items.length) return {feat:null,sides:[],alts:[]};
-    let feat=items.find(i=>i.featured);
-    const isAlt=i=>i.alt!==undefined?i.alt:ALT_RE.test(i.name);
-    if(!feat) feat=items.find(i=>ENTREE_RE.test(i.type||'')&&!isAlt(i))
-                  ||items.find(i=>!isAlt(i)&&!NEVER_HEAD.test(i.type||'')&&!notAMain(i.name)&&!looksLikeSide(i.name))
-                  ||items.find(i=>!isAlt(i)&&!NEVER_HEAD.test(i.type||'')&&!notAMain(i.name))
-                  ||items.find(i=>ENTREE_RE.test(i.type||''))
-                  ||items.find(i=>!isAlt(i))||items[0];
-    return {
-      feat,
-      sides:items.filter(i=>i!==feat&&!isAlt(i)),
-      alts:items.filter(i=>i!==feat&&isAlt(i))
+    const bd = document.createElement('div'); bd.className = 'bd';
+    const tag = document.createElement('span');
+    tag.className = 'tag' + (catOf(ev)==='sports' ? '' : ' alt');
+    tag.textContent = catOf(ev)==='sports' ? 'Athletics' : 'District';
+    const sp = document.createElement('div'); sp.className='sp'; sp.textContent = ev.sport || '';
+    const mt = document.createElement('div'); mt.className='mt'; mt.textContent = ev.match || 'Game';
+    const info = document.createElement('div'); info.className='meta';
+    const add = (label,val) => {
+      if(!val) return;
+      const s=document.createElement('span'); const b=document.createElement('b');
+      b.textContent=label+': '; s.appendChild(b); s.appendChild(document.createTextNode(val));
+      info.appendChild(s);
     };
-  }
+    add('Time', ev.time); add('Location', ev.loc); add('Official', ev.ref);
 
-  // MealViewer sometimes sends names with the spaces missing
-  // ("nationalSchoolLunchWeek", "Burger PlantBased"). Put the spaces back
-  // where a lower-case letter runs straight into a capital, and start the
-  // name with a capital.
-  const unrun=t=>t.replace(/([a-z0-9])([A-Z])/g,'$1 $2')
-                  .replace(/\s+/g,' ').trim()
-                  .replace(/^[a-z]/,m=>m.toUpperCase());
-  // Menu names often carry codes like "(K)(H)" and run words together
-  // ("Beef(H)Homemade"). Split the codes out and show them as small tags
-  // rather than guessing what each one stands for.
-  function nameNode(name,cls){
-    const el=document.createElement('span'); if(cls) el.className=cls;
-    const codes=[];
-    let text=unrun((name||'').replace(/\(\s*([A-Z]{1,3})\s*\)/g,(_,c)=>{codes.push(c);return ' ';}))
-                       .replace(/\s+,/g,',');
-    text=text.replace(/\s+Option$/i,'').trim()||name;
-    el.appendChild(document.createTextNode(text));
-    [...new Set(codes)].forEach(c=>{
-      const t=document.createElement('span'); t.className='code'; t.textContent=c; el.appendChild(t);
-    });
+    bd.appendChild(tag); bd.appendChild(sp); bd.appendChild(mt); bd.appendChild(info);
+    if (ev.note){ const n=document.createElement('span'); n.className='note'; n.textContent=ev.note; bd.appendChild(n); }
+    el.appendChild(ico); el.appendChild(bd);
     return el;
   }
-  const plainName=n=>unrun((n||'').replace(/\(\s*[A-Z]{1,3}\s*\)/g,' '));
 
-  // A little food emoji for the banner, picked from the dish name.
-  function emojiFor(n){
-    const s=(n||'').toLowerCase();
-    const map=[[/chili|soup|stew/,'🍲'],[/pizza/,'🍕'],[/taco|burrito|nacho|quesadilla/,'🌮'],
-      [/burger/,'🍔'],[/hot\s*dog/,'🌭'],[/chicken|tender|nugget|wing/,'🍗'],[/pasta|penne|spaghetti|lasagna|mac/,'🍝'],
-      [/wrap|sandwich|sub|panini/,'🥪'],[/rice|teriyaki|orange chicken|fried rice/,'🍚'],[/salad/,'🥗'],
-      [/pancake|waffle|french toast/,'🥞'],[/bagel|muffin|bread/,'🥯'],[/egg/,'🍳'],[/fish/,'🐟']];
-    for(const [re,e] of map) if(re.test(s)) return e;
-    return '🍽️';
-  }
+  // ── Month grid ─────────────────────────────────────────────────────
+  // Months already built are kept, because people page back and forth through
+  // the same few. Re-inserting finished cells skips rebuilding ~250 nodes, so
+  // a revisit is near-instant. Cleared whenever the data or a filter changes.
+  const monthCache = new Map();
 
-  // ---------- Header controls ----------
-  function renderMeals(){
-    const ms=allMeals(); mealsEl.innerHTML='';
-    mealsEl.style.display=ms.length>1?'':'none';
-    ms.forEach(x=>{
-      const b=document.createElement('button'); b.textContent=x; if(x===meal) b.className='on';
-      b.addEventListener('click',()=>{meal=x;render();}); mealsEl.appendChild(b);
-    });
-  }
-
-  // ---------- Headline banner ----------
-  function renderHero(){
-    let k=TODAY, when="Today's lunch";
-    if(!itemsFor(k).length){
-      const up=Object.keys(schoolDays()).filter(x=>x>TODAY&&itemsFor(x).length).sort()[0];
-      if(!up){hero.style.display='none';return;}
-      k=up; when=`${fmt(fromKey(k),{weekday:'long'})}'s ${(meal||'lunch').toLowerCase()} · ${fmt(fromKey(k),{month:'short',day:'numeric'})}`;
-    } else if(meal && meal!=='Lunch') when=`Today's ${meal.toLowerCase()}`;
-    hero.style.display='';
-
-    const {feat,sides,alts}=parts(itemsFor(k));
-    hero.innerHTML='';
-    const inn=document.createElement('div'); inn.className='hero-in';
-    const plate=document.createElement('div'); plate.className='plate'; plate.textContent=emojiFor(feat&&feat.name);
-    const txt=document.createElement('div'); txt.className='txt';
-    const w=document.createElement('div'); w.className='when'; w.textContent=when;
-    const dish=document.createElement('div'); dish.className='dish'; dish.textContent=plainName(feat&&feat.name);
-    txt.append(w,dish);
-    if(sides.length){
-      const tags=document.createElement('div'); tags.className='tags';
-      sides.forEach(s=>{const t=document.createElement('span');t.className='tag';t.textContent=plainName(s.name);tags.appendChild(t);});
-      txt.appendChild(tags);
-    }
-    if(alts.length){
-      const o=document.createElement('div'); o.className='opts';
-      o.textContent='Also available: '+alts.map(a=>plainName(a.name).replace(/\s+Option$/i,'')).join(' · ');
-      txt.appendChild(o);
-    }
-    const tog=document.createElement('button'); tog.className='tog';
-    tog.setAttribute('aria-expanded',String(heroOpen));
-    tog.setAttribute('aria-controls','hero');
-    const lab=document.createElement('span'); lab.textContent=heroOpen?'Hide':'Show';
-    const chev=document.createElement('span'); chev.className='chev'; chev.textContent='▴';
-    tog.append(lab,chev);
-    tog.addEventListener('click',()=>{
-      heroOpen=!heroOpen;
-      hero.classList.toggle('closed',!heroOpen);
-      lab.textContent=heroOpen?'Hide':'Show';
-      tog.setAttribute('aria-expanded',String(heroOpen));
-      requestAnimationFrame(()=>{ fitMonth(); fitWeek(); });  // more room -> bigger text
-    });
-    inn.append(plate,txt,tog); hero.appendChild(inn);
-    hero.classList.toggle('closed',!heroOpen);
-  }
-
-  // ---------- Week view ----------
-  function renderWeek(){
-    const mon=anchor;
-    lbl.textContent=`${fmt(mon,{month:'short',day:'numeric'})} – ${fmt(addDays(mon,4),{month:'short',day:'numeric'})}`;
-    const grid=document.createElement('div'); grid.className='week';
-    let shown=0;
-    for(let i=0;i<5;i++){
-      const d=addDays(mon,i),k=key(d),items=itemsFor(k);
-      if(items.length) shown++;
-      const card=document.createElement('div');
-      card.className='day'+(k===TODAY?' today':'')+(items.length?'':' off');
-      card.style.animationDelay = reduceMotion ? '0ms' : `${i*60}ms`;
-      const h=document.createElement('h2');
-      const a=document.createElement('span');a.className='dow';a.textContent=fmt(d,{weekday:'long'});
-      const b=document.createElement('span');b.className='dt';
-      b.textContent=k===TODAY?'TODAY':fmt(d,{month:'short',day:'numeric'}).toUpperCase();
-      h.append(a,b); card.appendChild(h);
-
-      const body=document.createElement('div'); body.className='db';
-      if(!items.length){
-        const n=document.createElement('div');n.className='off-note';n.textContent='No menu posted';body.appendChild(n);
-      }else{
-        const {feat,sides,alts}=parts(items);
-        const lt=document.createElement('span'); lt.className='lunchtag';
-        lt.textContent = k===TODAY ? "Today's lunch" : 'Lunch';
-        body.appendChild(lt);
-        body.appendChild(nameNode(feat.name,'feat'));
-        if(sides.length){
-          const wrap=document.createElement('div');
-          const t=document.createElement('div');t.className='sect';t.textContent='Served with';
-          const l=document.createElement('div');l.className='sides';
-          sides.forEach(s=>l.appendChild(nameNode(s.name)));
-          wrap.append(t,l); body.appendChild(wrap);
-        }
-        if(alts.length){
-          const box=document.createElement('div');box.className='alts';
-          const t=document.createElement('div');t.className='sect';t.textContent='Daily options';
-          box.appendChild(t);
-          alts.forEach(x=>{const s=nameNode(x.name);s.style.display='block';s.style.fontSize='12px';s.style.color='var(--soft)';box.appendChild(s);});
-          body.appendChild(box);
-        }
-      }
-      card.appendChild(body); grid.appendChild(card);
-    }
-    viewEl.innerHTML=''; viewEl.appendChild(grid);
-    noteEl.textContent=shown?'Menus can change due to product availability. Source: MealViewer.'
-                            :'Nothing posted for this week yet — use the arrows to browse, or switch to Month.';
-    requestAnimationFrame(fitWeek);
-  }
-
-  // ---------- Month view ----------
   function renderMonth(){
-    const first=new Date(anchor.getFullYear(),anchor.getMonth(),1);
-    const last=new Date(anchor.getFullYear(),anchor.getMonth()+1,0);
-    lbl.textContent=fmt(first,{month:'long',year:'numeric'});
+    const y = cursor.getFullYear(), mo = cursor.getMonth();
+    monthEl.textContent = `${MONTHS[mo]} ${y}`;
+    monthEl.classList.remove('flip'); void monthEl.offsetWidth; monthEl.classList.add('flip');
 
-    const head=document.createElement('div'); head.className='mhead';
-    ['Mon','Tue','Wed','Thu','Fri'].forEach(x=>{const d=document.createElement('div');d.textContent=x;head.appendChild(d);});
-    const grid=document.createElement('div'); grid.className='month';
-
-    // Start on the Monday of the week containing the 1st, finish on the
-    // Friday of the week containing the last day; weekends are skipped.
-    let d=mondayOf(first), n=0, shown=0;
-    const end=addDays(mondayOf(last),4);
-    while(d<=end){
-      for(let i=0;i<5;i++){
-        const day=addDays(d,i),k=key(day),inMonth=day.getMonth()===first.getMonth();
-        const items=itemsFor(k);
-        const c=document.createElement('div');
-        c.className='cell'+(inMonth?'':' out')+(inMonth&&!items.length?' empty':'')+(k===TODAY?' today':'');
-        c.style.animationDelay = reduceMotion ? '0ms' : `${Math.min(n,25)*16}ms`; n++;
-        const num=document.createElement('div');num.className='n';num.textContent=day.getDate();
-        c.appendChild(num);
-        if(inMonth&&items.length){
-          shown++;
-          const {feat,sides}=parts(items);
-          const f=document.createElement('div');f.className='f';f.textContent=plainName(feat.name);
-          c.appendChild(f);
-          if(sides.length){
-            const s=document.createElement('div');s.className='s';
-            s.textContent=sides.map(x=>plainName(x.name)).join(', ');
-            c.appendChild(s);
-          }
-        }
-        if(inMonth) c.addEventListener('click',()=>{mode='week';anchor=mondayOf(day);render();});
-        grid.appendChild(c);
-      }
-      d=addDays(d,7);
+    const ck = `${y}-${mo}`;
+    const hit = monthCache.get(ck);
+    if(hit){
+      grid.replaceChildren(...hit);
+      requestAnimationFrame(fitPills);
+      return;
     }
-    viewEl.innerHTML=''; viewEl.append(head,grid);
-    noteEl.textContent=shown?'Tap any day to see its full menu. Menus can change due to product availability.'
-                            :'No menu posted for this month yet.';
-    requestAnimationFrame(fitMonth);
-  }
 
-  // Size the month so the whole thing is visible at once, every lunch name
-  // in full. Largest text that fits wins; if even the smallest readable size
-  // doesn't fit, sides are dropped (lunch names are kept); if it still
-  // doesn't fit (e.g. a phone held sideways), the month scrolls instead.
-  function fitMonth(){
-    const m=viewEl.querySelector('.month');
-    if(mode!=='month'||!m||!m.getBoundingClientRect) return;
-    m.classList.remove('compact','breakwords');
-    const cells=[...m.querySelectorAll('.cell')];
-    const texts=[...m.querySelectorAll('.f,.s')];
-    const overflowing=()=>cells.some(c=>c.scrollHeight>c.clientHeight+1)
-                        || texts.some(t=>t.offsetParent && t.scrollWidth>t.clientWidth+1);
-    const small=window.innerWidth<641;
-    const maxF=small?12:15, minF=small?8.5:10;
-    const attempt=()=>{
-      for(let f=maxF; f>=minF; f-=0.5){
-        m.style.setProperty('--mf',f+'px');
-        if(!overflowing()) return true;
+    // Built off-screen in a fragment and swapped in once, so the browser
+    // styles and lays out the month a single time instead of 35 times.
+    const frag = document.createDocumentFragment();
+    const first = new Date(y,mo,1).getDay();
+    const days  = new Date(y,mo+1,0).getDate();
+
+    for(let i=0;i<first;i++){
+      const c=document.createElement('div'); c.className='cell pad'; frag.appendChild(c);
+    }
+    for(let d=1; d<=days; d++){
+      const k = `${y}-${pad(mo+1)}-${pad(d)}`;
+      const evs = eventsOn(k);
+      const c = document.createElement('div');
+      c.className = 'cell' + (evs.length?' has':'') + (k===TODAY?' today':'');
+      c.style.animationDelay = reduceMotion ? '0ms' : `${Math.min(d,24)*16}ms`;
+
+      const num=document.createElement('div'); num.className='num'; num.textContent=d;
+      c.appendChild(num);
+
+      if(evs.length){
+        const box=document.createElement('div'); box.className='pills';
+        evs.forEach(ev=>{
+          const p=document.createElement('div'); p.className='pill';
+          p.style.setProperty('--c', meta(ev.type).c);
+          const t=(ev.time||'').replace(':00','').replace(' PM','p').replace(' AM','a');
+          // Sports show the team/level, except feed-sourced athletics
+          // (e.g. "RED OUT for Girls Varsity Volleyball") whose title is
+          // the informative part.
+          const isSport = catOf(ev)==='sports' && ev.sport !== 'Athletics';
+          const s = isSport
+            ? (ev.sport||'').replace('Boys Varsity','B.Var').replace('Boys JV','B.JV')
+                  .replace('Boys Jr. Varsity','B.JV').replace('Boys Jr.Varsity','B.JV')
+                  .replace('Girls Varsity','G.Var').replace('Girls JV','G.JV')
+                  .replace('Girls Jr. Varsity','G.JV')
+            : (ev.match||'');
+          if(ev.type==='halfday'){
+            p.textContent = '🕧 Half Day';
+            p.classList.add('status');
+          }else if(ev.type==='noschool'){
+            const why = (ev.match||'').replace(/\s*[-–]\s*(no school|district closed)\s*$/i,'').trim();
+            p.textContent = (!why || /^no school$/i.test(why)) ? '🚫 No School' : `🚫 ${why} · No School`;
+            p.classList.add('status');
+          }else{
+            p.textContent = `${t} ${s}`.trim();
+          }
+          p.title = `${ev.match||''}${ev.time?' · '+ev.time:''}${ev.loc?' · '+ev.loc:''}`;
+          box.appendChild(p);
+        });
+        c.appendChild(box);
+
+        const dots=document.createElement('div'); dots.className='dots';
+        evs.slice(0,4).forEach(ev=>{
+          const i=document.createElement('i');
+          i.style.setProperty('--c', meta(ev.type).c); dots.appendChild(i);
+        });
+        c.appendChild(dots);
+        c.addEventListener('click',()=>openModal(k,evs));
       }
-      return false;
-    };
-    if(attempt()) return;
-    m.classList.add('compact');           // 1st fallback: drop sides, keep lunches
-    if(attempt()) return;
-    m.classList.add('breakwords');        // 2nd: allow breaking very long words
-    if(attempt()) return;
-    // Nothing fits even at the smallest size: keep the smallest and clip.
-    m.style.setProperty('--mf',minF+'px');
+      frag.appendChild(c);
+    }
+    // Capped: paging a long way ahead shouldn't pile up months nobody is
+    // going back to.
+    if(monthCache.size>=8) monthCache.delete(monthCache.keys().next().value);
+    monthCache.set(ck, [...frag.childNodes]);
+    grid.replaceChildren(frag);
+    requestAnimationFrame(fitPills);
   }
-  // Same idea as fitMonth, for the week view.
-  function fitWeek(){
-    const w=viewEl.querySelector('.week');
-    if(mode!=='week'||!w||!w.getBoundingClientRect) return;
-    w.classList.remove('noalts');
-    const over=()=>viewEl.scrollHeight>viewEl.clientHeight+1;
-    const small=window.innerWidth<641;
-    const maxF=small?14:16, minF=small?8.5:9.5;
-    const attempt=()=>{
-      for(let f=maxF; f>=minF; f-=0.5){
-        w.style.setProperty('--wf',f+'px');
-        if(!over()) return true;
+
+  // ── Agenda ─────────────────────────────────────────────────────────
+  function renderAgenda(){
+    const keys = datesWithEvents();
+    if(!keys.length){ agenda.replaceChildren(emptyState()); return; }
+
+    // Whole list assembled off-screen, then swapped in with one write --
+    // a season's worth of cards is a lot of DOM to add one node at a time.
+    const frag = document.createDocumentFragment();
+    let placed=false, divider=null, n=0;
+    keys.forEach(k=>{
+      if(!placed && k>=TODAY){
+        divider=document.createElement('div'); divider.className='divider';
+        divider.innerHTML='<span>Today</span>'; frag.appendChild(divider); placed=true;
       }
-      return false;
-    };
-    if(attempt()) return;
-    w.classList.add('noalts');        // drop the daily options first
-    if(attempt()) return;
-    w.style.setProperty('--wf',minF+'px');
+      const g=document.createElement('div');
+      g.className='grp'+(k<TODAY?' past':'');
+      const h=document.createElement('h3'); h.textContent=longDate(k); g.appendChild(h);
+      eventsOn(k).forEach(ev=>{ g.appendChild(card(ev,n)); n++; });
+      frag.appendChild(g);
+    });
+    agenda.replaceChildren(frag);
+
+    // Start the list at today rather than at the oldest past event.
+    if(!agendaScrolled){
+      agendaScrolled=true;
+      requestAnimationFrame(()=>{
+        const t=agenda.querySelector('.divider')||agenda.lastElementChild;
+        if(t) agenda.scrollTop=Math.max(0,t.offsetTop-10);
+      });
+    }
   }
 
-  let fitTimer=null;
-  const refit=()=>{ clearTimeout(fitTimer);
-    fitTimer=setTimeout(()=>{ fitMonth(); fitWeek(); },120); };
-  window.addEventListener('resize',refit);
 
-  // Some hosts -- Google Sites among them -- settle the embed frame to its
-  // final size after load without firing a resize event. Watch for the box
-  // changing under us so the text isn't sized for a frame that no longer
-  // exists; two property reads when nothing has moved.
-  let seenBox='';
-  function watchBox(){
-    const w=window.innerWidth||document.documentElement.clientWidth||0;
-    const h=window.innerHeight||document.documentElement.clientHeight||0;
-    const k=w+'x'+h;
-    if(w&&h&&k!==seenBox){ seenBox=k; refit(); }
+  function emptyState(){
+    const d=document.createElement('div'); d.className='empty';
+    const b=document.createElement('b');
+    b.textContent = Object.keys(DATA).length ? 'No games match this filter'
+                                             : 'Schedule unavailable';
+    d.appendChild(b);
+    const unlinked = !/^https?:/i.test(EVENTS_JSON_URL);
+    if(!Object.keys(DATA).length && unlinked) b.textContent='This copy of the calendar isn\u2019t set up yet';
+    d.appendChild(document.createTextNode(
+      Object.keys(DATA).length
+        ? 'Try turning a sport filter back on.'
+        : unlinked
+          ? 'This is the template file. In the GitHub repository, open embed.html (the updater creates it on every run) and paste that into Google Sites instead.'
+          : "Couldn't load the schedule right now. It updates automatically a few times a day."
+    ));
+    if(!Object.keys(DATA).length){
+      const r=document.createElement('button'); r.className='retry'; r.textContent='Try again';
+      r.addEventListener('click',load); d.appendChild(document.createElement('br')); d.appendChild(r);
+    }
+    return d;
   }
-  [100,350,900,2000,4000].forEach(t=>setTimeout(watchBox,t));
-  setInterval(watchBox,1000);
 
-  // ---------- Render ----------
+  // ── Next-up banner ─────────────────────────────────────────────────
+  function renderNext(){
+    const keys = datesWithEvents();
+    const k = keys.find(x => x >= TODAY);
+    nextUp.innerHTML='';
+    const lab=document.createElement('span'); lab.className='lab'; lab.textContent='Next up';
+    if(!k){
+      lab.textContent = keys.length ? 'No upcoming games scheduled' : 'No games loaded';
+      nextUp.appendChild(lab); return;
+    }
+    const evs=eventsOn(k), ev=evs[0], extra = evs.length>1 ? ` (+${evs.length-1} more that day)` : '';
+    const dot=document.createElement('span'); dot.className='dot'; dot.style.background=meta(ev.type).c;
+    const m=document.createElement('span'); m.className='m'; m.textContent=ev.match||'Game';
+    const d=document.createElement('span'); d.className='d';
+    d.textContent = `${ev.sport||''}, ${k===TODAY?'Today':shortDate(k)}`
+                  + (ev.time?` at ${ev.time}`:'') + (ev.loc?`, ${ev.loc}`:'') + extra;
+    nextUp.append(lab,dot,m,d);
+    const away=daysBetween(TODAY,k);
+    const cd=document.createElement('span'); cd.className='cd';
+    cd.innerHTML = away===0 ? 'Happening <b>today</b>'
+                 : away===1 ? '<b>Tomorrow</b>'
+                 : `In <b>${away}</b> days`;
+    nextUp.appendChild(cd);
+  }
+
   const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Count a number up to its value -- the same trick the quiz uses on its
+  // score, applied to the stat pills.
   function countUp(el,to){
     if(reduceMotion || to<=2){ el.textContent=to; return; }
     const dur=520, t0=performance.now();
     (function step(t){
       const p=Math.min(1,(t-t0)/dur);
-      el.textContent=Math.round(to*(1-Math.pow(1-p,3)));
+      el.textContent = Math.round(to*(1-Math.pow(1-p,3)));   // ease-out
       if(p<1) requestAnimationFrame(step); else el.textContent=to;
     })(t0);
   }
+
+  // Replay an entrance animation on an element.
   function replay(el,cls){
     if(reduceMotion) return;
-    el.classList.remove('nav-next','nav-prev'); void el.offsetWidth; el.classList.add(cls);
+    el.classList.remove('nav-next','nav-prev');
+    void el.offsetWidth;
+    el.classList.add(cls);
   }
 
-  // The red block behind the selected button slides across rather than
-  // jumping. Applies to every segmented control on the page.
-  function moveThumbs(){
-    document.querySelectorAll('.seg').forEach(seg=>{
-      let t=seg.querySelector(':scope > .thumb');
-      const on=seg.querySelector('button.on');
-      if(!on){ if(t) t.style.width='0'; return; }
-      if(!t){ t=document.createElement('i'); t.className='thumb init'; seg.insertBefore(t,seg.firstChild); }
-      t.style.width=on.offsetWidth+'px';
-      t.style.transform=`translateX(${on.offsetLeft}px)`;
-      if(t.classList.contains('init'))
-        requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.remove('init')));
+  function daysBetween(a,b){
+    const [y1,m1,d1]=a.split('-').map(Number), [y2,m2,d2]=b.split('-').map(Number);
+    return Math.round((Date.UTC(y2,m2-1,d2)-Date.UTC(y1,m1-1,d1))/86400000);
+  }
+
+  // ── Sport filter chips ─────────────────────────────────────────────
+  function renderChips(){
+    const all = Object.values(DATA).flat();
+    const counts = {};
+    all.forEach(e => { const c = catOf(e); counts[c] = (counts[c]||0)+1; });
+    const present = Object.keys(CATS).filter(c => counts[c]);
+
+    chips.innerHTML='';
+    if(present.length<2) return;      // nothing useful to filter
+    present.forEach(c=>{
+      const b=document.createElement('button');
+      const on = !activeSports || activeSports.has(c);
+      b.className='chip'+(on?' on':'')+(c==='district'?' district':'');
+      b.textContent=`${CATS[c].i} ${CATS[c].label}`;
+      b.title = `${counts[c]} event${counts[c]===1?'':'s'} — click to show or hide`;
+      b.setAttribute('aria-pressed', String(on));
+      b.addEventListener('click',()=>{
+        if(!activeSports) activeSports=new Set(present);
+        activeSports.has(c) ? activeSports.delete(c) : activeSports.add(c);
+        if(activeSports.size===present.length) activeSports=null;
+        agendaScrolled=false; renderAll();
+      });
+      chips.appendChild(b);
     });
   }
-  window.addEventListener('resize',()=>{ clearTimeout(window.__segT);
-    window.__segT=setTimeout(moveThumbs,120); });
 
-  function render(){
-    renderMeals();
-    $('vWeek').classList.toggle('on',mode==='week');
-    $('vMonth').classList.toggle('on',mode==='month');
-    requestAnimationFrame(moveThumbs);
-    if(!Object.keys(schoolDays()).length){
-      hero.style.display='none';
-      lbl.textContent='';
-      viewEl.innerHTML='';
-      viewEl.appendChild(emptyState());
-      noteEl.textContent='';
-      return;
-    }
-    renderHero();
-    if(mode==='week'){ renderWeek(); }
-    else renderMonth();
-  }
+  // Trim each day's event pills to the ones that fit, and add "+N more".
+  //
+  // This used to hide one pill, re-measure, hide another, re-measure -- every
+  // measurement after a style change forces the browser to lay the whole grid
+  // out again, so a single month change cost ~70 full layouts and the arrows
+  // felt sluggish on a slow machine. The work is the same; the order is what
+  // matters. Clear, then read EVERYTHING, then write everything -- the reads
+  // cost one layout between them because nothing changes in the middle.
+  function fitPills(){
+    const cells=[...grid.querySelectorAll('.cell.has')];
+    if(!cells.length) return;
 
-  function emptyState(){
-    const d=document.createElement('div');d.className='empty-state';
-    // A copy that still has the placeholder link was pasted before the
-    // updater filled it in. Say so plainly -- only the site owner will ever
-    // see this, and it's the one message that tells them how to fix it.
-    const unlinked = !/^https?:/i.test(MENU_URL);
-    const b=document.createElement('b');
-    b.textContent = unlinked ? 'This copy of the menu isn\u2019t set up yet' : 'Menu unavailable';
-    d.appendChild(b);
-    d.appendChild(document.createTextNode(unlinked
-      ? 'This is the template file. In the GitHub repository, open embed.html (the updater creates it on every run) and paste that into Google Sites instead.'
-      : "Couldn't load the menu right now. It refreshes automatically each day."));
-    const r=document.createElement('button');r.className='retry';r.textContent='Try again';
-    r.addEventListener('click',load);d.appendChild(document.createElement('br'));d.appendChild(r);
-    return d;
-  }
+    // -- write: reset to the full set, and park a probe to size "+N more".
+    const boxes=[];
+    cells.forEach(cell=>{
+      const box=cell.querySelector('.pills'); if(!box) return;
+      const old=box.querySelector('.more'); if(old) old.remove();
+      const pills=[...box.querySelectorAll('.pill')];
+      pills.forEach(p=>p.style.display='');
+      if(pills.length) boxes.push({box,pills});
+    });
+    if(!boxes.length) return;
+    const probe=document.createElement('div');
+    probe.className='more'; probe.textContent='+8 more';
+    boxes[0].box.appendChild(probe);
 
-  // ---------- Controls ----------
-  $('vWeek').addEventListener('click',()=>{
-    if(mode!=='week'){
-      mode='week';
-      const now=new Date();
-      if(anchor.getFullYear()===now.getFullYear()&&anchor.getMonth()===now.getMonth()){
-        anchor=schoolWeekMonday(now);
-      }else{
-        let d=new Date(anchor);                       // 1st of the shown month
-        while(d.getDay()===0||d.getDay()===6) d=addDays(d,1);
-        anchor=mondayOf(d);
+    // -- read: no writes in here, so the browser lays out once for the lot.
+    const gap=parseFloat(getComputedStyle(boxes[0].box).rowGap)||3;
+    const moreH=probe.offsetHeight||14;
+    boxes.forEach(b=>{
+      b.boxH=b.box.clientHeight;
+      b.hs=b.pills.map(p=>p.offsetHeight);
+    });
+
+    // -- compute: plain arithmetic, nothing touches the DOM.
+    probe.remove();
+    boxes.forEach(b=>{
+      if(!b.boxH || !b.hs[0]){ b.show=b.pills.length; return; }   // phones show dots
+      let used=0, fits=0;
+      for(let i=0;i<b.hs.length;i++){
+        const next=used+(i?gap:0)+b.hs[i];
+        if(next>b.boxH) break;
+        used=next; fits++;
       }
-    }
-    render();
-  });
-  $('vMonth').addEventListener('click',()=>{
-    if(mode!=='month'){
-      mode='month';
-      // A week straddling two months belongs to the month its Wednesday is in.
-      const mid=addDays(anchor,2);
-      anchor=new Date(mid.getFullYear(),mid.getMonth(),1);
-    }
-    render();
-  });
-  $('prev').addEventListener('click',()=>{
-    anchor = mode==='week' ? addDays(anchor,-7) : new Date(anchor.getFullYear(),anchor.getMonth()-1,1);
-    render(); replay(viewEl,'nav-prev');
-  });
-  $('next').addEventListener('click',()=>{
-    anchor = mode==='week' ? addDays(anchor,7) : new Date(anchor.getFullYear(),anchor.getMonth()+1,1);
-    render(); replay(viewEl,'nav-next');
-  });
-  $('tdy').addEventListener('click',()=>{
-    const w=schoolWeekMonday(new Date());
-    anchor = mode==='week' ? w : new Date(w.getFullYear(),w.getMonth(),1);
-    render();
-  });
+      if(fits>=b.pills.length){ b.show=fits; return; }            // all of them fit
+      // One slot has to pay for the "+N more" line.
+      while(fits>1 && used+gap+moreH>b.boxH) used-=b.hs[--fits]+gap;
+      // A lone event is better clipped than replaced by "+1 more".
+      b.show=Math.max(1,fits);
+      b.hidden=b.pills.length-b.show;
+    });
 
-  // ---------- Load ----------
-  function fmtWhen(iso){try{return new Date(iso).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}catch(e){return null;}}
+    // -- write: all the changes at once.
+    boxes.forEach(b=>{
+      for(let i=b.show;i<b.pills.length;i++) b.pills[i].style.display='none';
+      if(b.hidden>0){
+        const more=document.createElement('div');
+        more.className='more'; more.textContent=`+${b.hidden} more`;
+        b.box.appendChild(more);
+      }
+    });
+  }
+  let fitTimer=null;
+  window.addEventListener('resize',()=>{ clearTimeout(fitTimer);
+    fitTimer=setTimeout(fitPills,120); });
 
-  function adopt(p){
-    DATA=p;
-    school=Object.keys(DATA.schools||{})[0]||null;
-    const ms=allMeals(); if(!ms.includes(meal)) meal=ms[0]||null;
-    anchor=schoolWeekMonday(new Date());
-    // If the coming week has nothing posted, jump to the nearest week that does.
-    const has=w=>{for(let i=0;i<5;i++) if(itemsFor(key(addDays(w,i))).length) return true; return false;};
-    if(!has(anchor)){
-      const ks=Object.keys(schoolDays()).filter(k=>itemsFor(k).length).sort();
-      const nk=ks.find(k=>k>=TODAY)||ks[ks.length-1];
-      if(nk) anchor=mondayOf(fromKey(nk));
-    }
-    render();
+  // New data or a changed filter invalidates every built month.
+  function renderAll(){ monthCache.clear(); renderChips(); renderMonth(); renderAgenda(); renderNext(); }
+
+  // ── Modal ──────────────────────────────────────────────────────────
+  function openModal(k,evs){
+    mTitle.textContent=longDate(k);
+    mBody.innerHTML='';
+    evs.forEach((e,i)=>mBody.appendChild(card(e,i)));
+    modal.classList.add('on');
+  }
+  const closeModal=()=>modal.classList.remove('on');
+  $('mX').addEventListener('click',closeModal);
+  $('mClose').addEventListener('click',closeModal);
+  modal.addEventListener('click',e=>{ if(e.target===modal) closeModal(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&modal.classList.contains('on')) closeModal(); });
+
+  // ── Views + navigation ─────────────────────────────────────────────
+  function setView(v){
+    view=v; const isM = v==='month';
+    $('pMonth').classList.toggle('on',isM);
+    $('pAgenda').classList.toggle('on',!isM);
+    $('vMonth').classList.toggle('on',isM);
+    $('vAgenda').classList.toggle('on',!isM);
+    $('vMonth').setAttribute('aria-selected',String(isM));
+    $('vAgenda').setAttribute('aria-selected',String(!isM));
+    moveThumb();
+  }
+
+  // The red block behind the active view slides across instead of blinking
+  // from one button to the other.
+  const viewsEl=document.querySelector('.views');
+  const thumb=document.createElement('i');
+  thumb.className='thumb init';
+  if(viewsEl) viewsEl.insertBefore(thumb,viewsEl.firstChild);
+  function moveThumb(){
+    if(!viewsEl) return;
+    const on=viewsEl.querySelector('button.on'); if(!on) return;
+    thumb.style.width=on.offsetWidth+'px';
+    thumb.style.transform=`translateX(${on.offsetLeft}px)`;
+  }
+  // The first placement must not animate in from the left edge.
+  requestAnimationFrame(()=>{ moveThumb();
+    requestAnimationFrame(()=>thumb.classList.remove('init')); });
+  window.addEventListener('resize',()=>{ clearTimeout(thumb._t);
+    thumb._t=setTimeout(moveThumb,120); });
+  $('vMonth').addEventListener('click',()=>setView('month'));
+  $('vAgenda').addEventListener('click',()=>setView('agenda'));
+  $('prev').addEventListener('click',()=>{cursor.setMonth(cursor.getMonth()-1);renderMonth();replay(grid,'nav-prev');});
+  $('next').addEventListener('click',()=>{cursor.setMonth(cursor.getMonth()+1);renderMonth();replay(grid,'nav-next');});
+  $('todayBtn').addEventListener('click',()=>{ cursor=new Date(); renderMonth();  });
+  setView(view);
+
+  // Open on the most useful month: the one holding the next upcoming
+  // game, else the most recent month that has games, else today.
+  function pickMonth(){
+    const keys=datesWithEvents();
+    if(!keys.length){ cursor=new Date(); return; }
+    const upcoming = keys.find(k=>k>=TODAY);
+    cursor = fromKey(upcoming || keys[keys.length-1]);
+    cursor.setDate(1);
+  }
+
+  // ── Load ───────────────────────────────────────────────────────────
+  function fmtWhen(iso){
+    try{ return new Date(iso).toLocaleString('en-US',
+      {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }
+    catch(e){ return null; }
   }
 
   async function load(){
     statusEl.textContent='Loading…';
     try{
-      const res=await fetch(MENU_URL,{cache:'no-store'});
+      const res = await fetch(EVENTS_JSON_URL, {cache:'no-store'});
       if(!res.ok) throw new Error('HTTP '+res.status);
-      const data=await res.json();
-      if(!data||!data.schools||!Object.keys(data.schools).length) throw new Error('no menu data');
-      const w=fmtWhen(data.generated_at);
-      statusEl.classList.add('live');
-      statusEl.textContent=w?`Updated ${w}`:'Live menu';
-      adopt(data);
+      const data = await res.json();
+      const evs = data && data.events;
+      if(!evs || typeof evs!=='object') throw new Error('unexpected format');
+      const count = Object.keys(evs).length;
+      if(count === 0) throw new Error('feed contained no dates');
+      DATA = evs;
+      const when = fmtWhen(data.generated_at);
+      statusEl.classList.add('live');          // breathing green dot
+      statusEl.textContent = when ? `Updated ${when}` : 'Live schedule';
+      statusEl.title = 'Loaded live from ' + EVENTS_JSON_URL;
     }catch(err){
-      console.warn('Live menu unavailable, using saved copy:',err);
-      const n=FALLBACK.schools&&Object.keys(FALLBACK.schools).length;
+      console.warn('Live schedule unavailable, using saved copy:', err);
+      DATA = FALLBACK;
+      const n = Object.keys(FALLBACK).length;
       statusEl.classList.remove('live');
-      statusEl.textContent=n?'Saved menu':'Menu unavailable';
-      statusEl.title='Could not load live menu ('+((err&&err.message)||err)+').';
-      adopt(FALLBACK);
+      statusEl.textContent = n ? 'Saved schedule' : 'Schedule unavailable';
+      // Hovering the status shows the actual reason, which makes this
+      // diagnosable without opening the browser console.
+      statusEl.title = 'Could not load live schedule (' + (err && err.message ? err.message : err)
+                     + '). Showing the copy saved with this page.';
     }
+    agendaScrolled=false;
+    pickMonth();
+    renderAll();
   }
+
   load();
 
 
