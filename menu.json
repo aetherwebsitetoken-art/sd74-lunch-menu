@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-19T03:03:17.854872+00:00",
+  "generated_at": "2026-11-19T18:55:37.577665+00:00",
   "schools": {
     "Lincoln Hall": {
       "2026-11-02": {
@@ -594,6 +594,76 @@
             "alt": false,
             "name": "Homemade Rice Pudding",
             "type": "Dessert"
+          },
+          {
+            "alt": true,
+            "name": "Bagel Option (K)(H)",
+            "type": "Entr\u00e9e"
+          },
+          {
+            "alt": true,
+            "name": "Chef Salad W/Chicken (H) Option",
+            "type": "Entr\u00e9e"
+          },
+          {
+            "alt": true,
+            "name": "Protein Box Option (H)",
+            "type": "Entr\u00e9e"
+          }
+        ]
+      },
+      "2026-12-01": {
+        "Lunch": [
+          {
+            "alt": false,
+            "featured": true,
+            "name": "Penne Pasta Bolognese (H)",
+            "type": "Entr\u00e9e"
+          },
+          {
+            "alt": false,
+            "name": "Roasted Mediterranean Broccoli",
+            "type": "Vegetable"
+          },
+          {
+            "alt": false,
+            "name": "Garlic Bread W/ EVOO",
+            "type": "Grain"
+          },
+          {
+            "alt": true,
+            "name": "Bagel Option (K)(H)",
+            "type": "Entr\u00e9e"
+          },
+          {
+            "alt": true,
+            "name": "Chef Salad W/Chicken (H) Option",
+            "type": "Entr\u00e9e"
+          },
+          {
+            "alt": true,
+            "name": "Protein Box Option (H)",
+            "type": "Entr\u00e9e"
+          }
+        ]
+      },
+      "2026-12-02": {
+        "Lunch": [
+          {
+            "alt": false,
+            "featured": true,
+            "name": "Burger (H)(V) PlantBased",
+            "type": "Entr\u00e9e"
+          },
+          {
+            "alt": false,
+            "name": "Tator Tots",
+            "type": "Vegetable"
+          },
+          {
+            "alt": false,
+            "name": "Seasonal Fruit",
+            "type": "Fruit"
           },
           {
             "alt": true,
